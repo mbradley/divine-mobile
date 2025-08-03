@@ -143,13 +143,16 @@ class MockNostrService extends _i1.Mock implements _i4.NostrService {
       ) as String);
 
   @override
-  String get serviceName => (super.noSuchMethod(
-        Invocation.getter(#serviceName),
-        returnValue: _i6.dummyValue<String>(
-          this,
-          Invocation.getter(#serviceName),
+  _i5.Future<void> initialize({List<String>? customRelays}) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #initialize,
+          [],
+          {#customRelays: customRelays},
         ),
-      ) as String);
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
   bool isRelayAuthenticated(String? relayUrl) => (super.noSuchMethod(
@@ -168,18 +171,6 @@ class MockNostrService extends _i1.Mock implements _i4.NostrService {
         ),
         returnValueForMissingStub: null,
       );
-
-  @override
-  _i5.Future<void> initialize({List<String>? customRelays}) =>
-      (super.noSuchMethod(
-        Invocation.method(
-          #initialize,
-          [],
-          {#customRelays: customRelays},
-        ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
 
   @override
   _i5.Stream<_i7.Event> subscribeToEvents({
@@ -285,24 +276,6 @@ class MockNostrService extends _i1.Mock implements _i4.NostrService {
       ) as _i5.Future<void>);
 
   @override
-  Map<String, dynamic> getConnectionStatus() => (super.noSuchMethod(
-        Invocation.method(
-          #getConnectionStatus,
-          [],
-        ),
-        returnValue: <String, dynamic>{},
-      ) as Map<String, dynamic>);
-
-  @override
-  Map<String, dynamic> getDetailedRelayStatus() => (super.noSuchMethod(
-        Invocation.method(
-          #getDetailedRelayStatus,
-          [],
-        ),
-        returnValue: <String, dynamic>{},
-      ) as Map<String, dynamic>);
-
-  @override
   _i5.Future<void> closeAllSubscriptions() => (super.noSuchMethod(
         Invocation.method(
           #closeAllSubscriptions,
@@ -311,52 +284,6 @@ class MockNostrService extends _i1.Mock implements _i4.NostrService {
         returnValue: _i5.Future<void>.value(),
         returnValueForMissingStub: _i5.Future<void>.value(),
       ) as _i5.Future<void>);
-
-  @override
-  _i5.Future<void> clearPersistedAuthStates() => (super.noSuchMethod(
-        Invocation.method(
-          #clearPersistedAuthStates,
-          [],
-        ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
-
-  @override
-  void onAppBackgrounded() => super.noSuchMethod(
-        Invocation.method(
-          #onAppBackgrounded,
-          [],
-        ),
-        returnValueForMissingStub: null,
-      );
-
-  @override
-  void onExtendedBackground() => super.noSuchMethod(
-        Invocation.method(
-          #onExtendedBackground,
-          [],
-        ),
-        returnValueForMissingStub: null,
-      );
-
-  @override
-  void onAppResumed() => super.noSuchMethod(
-        Invocation.method(
-          #onAppResumed,
-          [],
-        ),
-        returnValueForMissingStub: null,
-      );
-
-  @override
-  void onPeriodicCleanup() => super.noSuchMethod(
-        Invocation.method(
-          #onPeriodicCleanup,
-          [],
-        ),
-        returnValueForMissingStub: null,
-      );
 
   @override
   _i5.Stream<_i7.Event> searchVideos(

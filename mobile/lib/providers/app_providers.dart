@@ -9,6 +9,7 @@ import 'package:openvine/services/analytics_service.dart';
 import 'package:openvine/services/api_service.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/bookmark_service.dart';
+import 'package:openvine/services/embedded_relay_service.dart';
 import 'package:openvine/services/connection_status_service.dart';
 import 'package:openvine/services/content_blocklist_service.dart';
 import 'package:openvine/services/content_deletion_service.dart';
@@ -23,7 +24,7 @@ import 'package:openvine/services/mute_service.dart';
 import 'package:openvine/services/nip05_service.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 import 'package:openvine/services/nostr_key_manager.dart';
-import 'package:openvine/services/nostr_service.dart';
+// import 'package:openvine/services/nostr_service.dart'; // Replaced with EmbeddedRelayService
 import 'package:openvine/services/nostr_service_interface.dart';
 import 'package:openvine/services/notification_service_enhanced.dart';
 import 'package:openvine/services/personal_event_cache_service.dart';
@@ -184,13 +185,22 @@ AuthService authService(Ref ref) {
   return AuthService(keyStorage: keyStorage);
 }
 
-/// Core Nostr service using nostr_sdk
+/// Core Nostr service using embedded relay
 @Riverpod(keepAlive: true)
 INostrService nostrService(Ref ref) {
   final keyManager = ref.watch(nostrKeyManagerProvider);
-  Log.debug('Creating NostrService with nostr_sdk RelayPool',
-      name: 'AppProviders');
-  return NostrService(keyManager);
+  print('AppProviders: Creating EmbeddedRelayService with embedded relay');
+  final service = EmbeddedRelayService(keyManager);
+  
+  // Initialize the embedded relay asynchronously
+  service.initialize();
+  
+  // Cleanup on disposal
+  ref.onDispose(() {
+    service.dispose();
+  });
+  
+  return service;
 }
 
 /// Subscription manager for centralized subscription management

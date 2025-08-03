@@ -55,13 +55,18 @@ class DirectUploadResult {
 /// Service for uploading videos and images directly to CF Workers
 /// REFACTORED: Removed ChangeNotifier - now uses pure state management via Riverpod
 class DirectUploadService  {
-  DirectUploadService({Nip98AuthService? authService})
-      : _authService = authService;
+  DirectUploadService({
+    Nip98AuthService? authService,
+    http.Client? httpClient,
+  }) : _authService = authService,
+       _httpClient = httpClient ?? http.Client();
+  
   static String get _baseUrl => AppConfig.backendBaseUrl;
 
   final Map<String, StreamController<double>> _progressControllers = {};
   final Map<String, StreamSubscription<double>> _progressSubscriptions = {};
   final Nip98AuthService? _authService;
+  final http.Client _httpClient;
 
   /// Upload a video file directly to CF Workers with progress tracking
   Future<DirectUploadResult> uploadVideo({
@@ -76,7 +81,7 @@ class DirectUploadService  {
         name: 'DirectUploadService', category: LogCategory.system);
 
     // First check backend connectivity
-    final isHealthy = await checkBackendHealth();
+    final isHealthy = await _checkBackendHealth();
     if (!isHealthy) {
       Log.error('❌ Backend is not accessible, aborting upload',
           name: 'DirectUploadService', category: LogCategory.system);
@@ -248,7 +253,7 @@ class DirectUploadService  {
 
       http.StreamedResponse streamedResponse;
       try {
-        streamedResponse = await request.send().timeout(
+        streamedResponse = await _httpClient.send(request).timeout(
           const Duration(minutes: 5),
           onTimeout: () {
             throw TimeoutException('Upload timed out after 5 minutes');
@@ -428,14 +433,16 @@ class DirectUploadService  {
   /// Check if an upload is currently in progress
   bool isUploading(String videoId) => _progressControllers.containsKey(videoId);
 
+  /// Dispose of resources (first dispose method - use the second one below instead)
+
   /// Check backend connectivity and health
-  static Future<bool> checkBackendHealth() async {
+  Future<bool> _checkBackendHealth() async {
     try {
       final healthUrl = AppConfig.healthUrl;
       Log.info('🏥 Checking backend health at: $healthUrl',
           name: 'DirectUploadService', category: LogCategory.system);
       
-      final response = await http.get(Uri.parse(healthUrl)).timeout(
+      final response = await _httpClient.get(Uri.parse(healthUrl)).timeout(
         const Duration(seconds: 10),
         onTimeout: () {
           throw TimeoutException('Health check timed out');
@@ -538,7 +545,7 @@ class DirectUploadService  {
       // Send request
       progressController.add(0.10); // 10% - Starting upload
 
-      final streamedResponse = await request.send();
+      final streamedResponse = await _httpClient.send(request);
 
       progressController.add(0.95); // Upload complete, processing response
 
@@ -667,7 +674,7 @@ class DirectUploadService  {
   Future<Map<String, dynamic>?> _checkFileExists(String sha256Hash) async {
     try {
       final url = '$_baseUrl/api/check/$sha256Hash';
-      final response = await http.get(
+      final response = await _httpClient.get(
         Uri.parse(url),
         headers: {
           'Accept': 'application/json',

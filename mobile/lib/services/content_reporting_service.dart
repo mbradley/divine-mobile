@@ -98,7 +98,7 @@ class ContentReportingService  {
   final SharedPreferences _prefs;
 
   // OpenVine moderation relay for reports
-  static const String moderationRelayUrl = 'wss://relay.openvine.co';
+  static const String moderationRelayUrl = 'wss://localhost:8080'; // Embedded relay
   static const String reportsStorageKey = 'content_reports_history';
 
   final List<ContentReport> _reportHistory = [];

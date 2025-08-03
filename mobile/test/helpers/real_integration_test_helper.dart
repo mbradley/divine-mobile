@@ -24,7 +24,7 @@ class RealIntegrationTestHelper {
     _isSetup = true;
   }
 
-  /// Create a real NostrService connected to test relays
+  /// Create a real NostrService with embedded relay
   static Future<NostrService> createRealNostrService() async {
     await setupTestEnvironment();
 
@@ -34,10 +34,8 @@ class RealIntegrationTestHelper {
     final nostrService = NostrService(keyManager);
     await nostrService.initialize();
 
-    // Connect to test relays (not mocked!)
-    for (final relay in AppConfig.testNostrRelays) {
-      await nostrService.addRelay(relay);
-    }
+    // Embedded relay is automatically started during initialization
+    // No need for external relay connections
 
     return nostrService;
   }

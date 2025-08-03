@@ -94,8 +94,8 @@ void main() {
             Log.info(
                 '⏳ Still waiting for events... attempt $waitAttempts/$maxWaitAttempts (${videoEventService.getEventCount(SubscriptionType.discovery)} events so far)');
 
-            // Log detailed relay status
-            final relayStatus = nostrService.getDetailedRelayStatus();
+            // Log relay status (embedded relay)
+            final relayStatus = nostrService.relayStatuses;
             Log.info('🔍 Relay status: $relayStatus');
           }
         }

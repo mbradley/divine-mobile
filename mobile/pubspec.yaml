@@ -49,6 +49,11 @@ dependencies:
   device_info_plus: ^10.1.0
   url_launcher: ^6.2.5
   
+  # P2P Connectivity for Video Sharing
+  flutter_blue_plus: ^1.32.8  # BLE for metadata sync
+  wifi_iot: ^0.3.18  # WiFi Direct for Android high-bandwidth sharing
+  permission_handler: ^11.3.1  # Handle runtime permissions
+  
   # Camera and media
   camera: ^0.11.0+2
   camera_macos: ^0.0.1  # macOS camera support

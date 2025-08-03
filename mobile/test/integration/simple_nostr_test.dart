@@ -32,10 +32,7 @@ void main() {
       expect(service.isDisposed, true);
     });
 
-    test('NostrServiceException should work correctly', () {
-      final exception = NostrServiceException('Test error');
-      expect(exception.message, 'Test error');
-      expect(exception.toString(), 'NostrServiceException: Test error');
-    });
+    // Note: NostrServiceException was removed during embedded relay refactor
+    // Exception handling is now handled by the embedded relay service directly
   });
 }

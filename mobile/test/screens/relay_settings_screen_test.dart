@@ -22,13 +22,11 @@ void main() {
 
       // Setup default mocks
       when(mockNostrService.relays).thenReturn([
-        'wss://relay.damus.io',
-        'wss://nos.lol',
+        'wss://localhost:8080',
       ]);
 
       when(mockNostrService.relayStatuses).thenReturn({
-        'wss://relay.damus.io': RelayStatus.connected,
-        'wss://nos.lol': RelayStatus.connecting,
+        'wss://localhost:8080': RelayStatus.connected,
       });
     });
 
@@ -49,8 +47,7 @@ void main() {
     testWidgets('displays list of relays with their status', (tester) async {
       await tester.pumpWidget(createTestWidget());
 
-      expect(find.text('wss://relay.damus.io'), findsOneWidget);
-      expect(find.text('wss://nos.lol'), findsOneWidget);
+      expect(find.text('wss://localhost:8080'), findsOneWidget);
 
       // Check for status indicators
       expect(find.byIcon(Icons.check_circle), findsOneWidget); // Connected
@@ -117,7 +114,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify removeRelay was called
-      verify(mockNostrService.removeRelay('wss://relay.damus.io')).called(1);
+      verify(mockNostrService.removeRelay('wss://localhost:8080')).called(1);
     });
 
     testWidgets('shows error when relay operation fails', (tester) async {
@@ -169,7 +166,7 @@ void main() {
       await tester.tap(find.byIcon(Icons.add));
       await tester.pumpAndSettle();
 
-      await tester.enterText(find.byType(TextField), 'wss://relay.damus.io');
+      await tester.enterText(find.byType(TextField), 'wss://localhost:8081');
       await tester.tap(find.text('Add'));
       await tester.pumpAndSettle();
 

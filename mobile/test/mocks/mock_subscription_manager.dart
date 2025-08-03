@@ -70,7 +70,7 @@ class MockSubscriptionManager extends SubscriptionManager {
   }
 
   @override
-  void dispose() {
+  Future<void> dispose() async {
     for (final controller in _subscriptions.values) {
       controller.close();
     }

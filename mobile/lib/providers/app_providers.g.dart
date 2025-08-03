@@ -313,9 +313,9 @@ final authServiceProvider = Provider<AuthService>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef AuthServiceRef = ProviderRef<AuthService>;
-String _$nostrServiceHash() => r'd502adb825764ebff5f34dbb5f6f088dc311fab9';
+String _$nostrServiceHash() => r'79d79799f7bfe28736f6c01eda7365573acafe49';
 
-/// Core Nostr service using nostr_sdk
+/// Core Nostr service using embedded relay
 ///
 /// Copied from [nostrService].
 @ProviderFor(nostrService)

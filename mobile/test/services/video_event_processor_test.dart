@@ -109,7 +109,7 @@ void main() {
         '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
         6, // kind 6 is repost
         [
-          ['e', 'original_video_id', 'wss://relay.com'],
+          ['e', 'original_video_id', 'wss://localhost:8080'],
           ['p', 'original_author_pubkey'],
         ],
         'Reposting this cool video',

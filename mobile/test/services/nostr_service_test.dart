@@ -32,13 +32,8 @@ void main() {
         expect(nostrService.connectedRelayCount, equals(0));
       });
 
-      test('should have default relays configured', () {
-        expect(NostrService.defaultRelays, isNotEmpty);
-        expect(NostrService.defaultRelays, contains('wss://relay.damus.io'));
-        expect(NostrService.defaultRelays, contains('wss://nos.lol'));
-        expect(
-            NostrService.defaultRelays, contains('wss://relay.snort.social'));
-        expect(NostrService.defaultRelays, contains('wss://relay.current.fyi'));
+      test('should use embedded relay by default', () {
+        expect(nostrService.relays, contains('wss://localhost:8080'));
       });
     });
 

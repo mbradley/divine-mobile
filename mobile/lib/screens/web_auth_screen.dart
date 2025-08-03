@@ -477,7 +477,7 @@ class _WebAuthScreenState extends ConsumerState<WebAuthScreen>
                 enableInteractiveSelection: true,
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
-                  hintText: 'bunker://pubkey?relay=wss://relay.example.com',
+                  hintText: 'bunker://pubkey?relay=wss://localhost:8080',
                   hintStyle: const TextStyle(color: Colors.white38),
                   filled: true,
                   fillColor: Colors.white.withValues(alpha: 0.05),

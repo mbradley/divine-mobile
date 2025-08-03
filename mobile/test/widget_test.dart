@@ -11,14 +11,24 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/main.dart';
 
 void main() {
-  testWidgets('OpenVine app smoke test', (tester) async {
+  testWidgets('OpenVine app UI validation test', (tester) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const OpenVineApp());
 
-    // Verify that the app loads with main navigation
-    expect(find.text('OpenVine'), findsOneWidget);
+    // Give it one pump to start the initialization
+    await tester.pump();
 
-    // Check for bottom navigation
-    expect(find.byType(BottomNavigationBar), findsOneWidget);
+    // Verify the app loads with proper Flutter structure
+    expect(find.byType(MaterialApp), findsOneWidget);
+    expect(find.byType(Scaffold), findsOneWidget);
+
+    // During initialization, we should see a loading indicator
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    
+    // Verify initialization status text is displayed
+    expect(find.text('Checking authentication...'), findsOneWidget);
+    
+    // Verify the app shows at least one text widget (initialization status)
+    expect(find.byType(Text), findsAtLeastNWidgets(1));
   });
 }

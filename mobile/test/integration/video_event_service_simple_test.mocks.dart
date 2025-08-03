@@ -4,7 +4,6 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i4;
-import 'dart:ui' as _i10;
 
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i5;
@@ -328,12 +327,24 @@ class MockSubscriptionManager extends _i1.Mock
   }
 
   @override
+  List<String> get activeSubscriptionIds => (super.noSuchMethod(
+        Invocation.getter(#activeSubscriptionIds),
+        returnValue: <String>[],
+      ) as List<String>);
+
+  @override
+  int get activeSubscriptionCount => (super.noSuchMethod(
+        Invocation.getter(#activeSubscriptionCount),
+        returnValue: 0,
+      ) as int);
+
+  @override
   _i4.Future<String> createSubscription({
     required String? name,
     required List<_i7.Filter>? filters,
     required dynamic Function(_i6.Event)? onEvent,
     dynamic Function(dynamic)? onError,
-    _i10.VoidCallback? onComplete,
+    dynamic Function()? onComplete,
     Duration? timeout,
     int? priority = 5,
   }) =>
@@ -381,6 +392,25 @@ class MockSubscriptionManager extends _i1.Mock
       ) as _i4.Future<void>);
 
   @override
+  _i4.Future<void> cancelAllSubscriptions() => (super.noSuchMethod(
+        Invocation.method(
+          #cancelAllSubscriptions,
+          [],
+        ),
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
+
+  @override
+  bool isSubscriptionActive(String? subscriptionId) => (super.noSuchMethod(
+        Invocation.method(
+          #isSubscriptionActive,
+          [subscriptionId],
+        ),
+        returnValue: false,
+      ) as bool);
+
+  @override
   _i4.Future<void> cancelSubscriptionsByName(String? namePattern) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -392,20 +422,12 @@ class MockSubscriptionManager extends _i1.Mock
       ) as _i4.Future<void>);
 
   @override
-  Map<String, dynamic> getStats() => (super.noSuchMethod(
-        Invocation.method(
-          #getStats,
-          [],
-        ),
-        returnValue: <String, dynamic>{},
-      ) as Map<String, dynamic>);
-
-  @override
-  void dispose() => super.noSuchMethod(
+  _i4.Future<void> dispose() => (super.noSuchMethod(
         Invocation.method(
           #dispose,
           [],
         ),
-        returnValueForMissingStub: null,
-      );
+        returnValue: _i4.Future<void>.value(),
+        returnValueForMissingStub: _i4.Future<void>.value(),
+      ) as _i4.Future<void>);
 }

@@ -11,7 +11,7 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/models/video_event.dart';
-import 'package:openvine/providers/feed_mode_providers.dart';
+// Feed mode providers removed during embedded relay refactor
 import 'package:openvine/providers/social_providers.dart' as social;
 import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/services/nostr_service_interface.dart';

@@ -87,7 +87,7 @@ void main() {
             .thenReturn(cachedVideos);
 
         // Mock empty subscription (no new events)
-        final controller = StreamController<NostrEvent>();
+        final controller = StreamController<Event>();
         when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
             .thenAnswer((_) => controller.stream);
 
@@ -132,7 +132,7 @@ void main() {
         // Arrange
         when(mockVideoEventService.getVideosByAuthor(testPubkey)).thenReturn([]);
         
-        final controller = StreamController<NostrEvent>();
+        final controller = StreamController<Event>();
         when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
             .thenAnswer((_) => controller.stream);
 
@@ -172,7 +172,7 @@ void main() {
         when(mockVideoEventService.getVideosByAuthor(testPubkey))
             .thenReturn(initialVideos);
 
-        final controller1 = StreamController<NostrEvent>();
+        final controller1 = StreamController<Event>();
         when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
             .thenAnswer((_) => controller1.stream);
 
@@ -202,7 +202,7 @@ void main() {
         when(mockVideoEventService.getVideosByAuthor(testPubkey))
             .thenReturn(updatedVideos);
 
-        final controller2 = StreamController<NostrEvent>();
+        final controller2 = StreamController<Event>();
         when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
             .thenAnswer((_) => controller2.stream);
 
@@ -259,7 +259,7 @@ void main() {
         when(mockVideoEventService.getVideosByAuthor(testPubkey))
             .thenReturn(initialVideos);
 
-        final controller1 = StreamController<NostrEvent>();
+        final controller1 = StreamController<Event>();
         when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
             .thenAnswer((_) => controller1.stream);
 
@@ -272,7 +272,7 @@ void main() {
         // (This would need to be done differently in real implementation)
         
         // Mock load more subscription
-        final controller2 = StreamController<NostrEvent>();
+        final controller2 = StreamController<Event>();
         when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
             .thenAnswer((_) => controller2.stream);
 
@@ -307,7 +307,7 @@ void main() {
         when(mockVideoEventService.getVideosByAuthor(testPubkey))
             .thenReturn([]);
 
-        final controller = StreamController<NostrEvent>();
+        final controller = StreamController<Event>();
         when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
             .thenAnswer((_) => controller.stream);
 
@@ -350,7 +350,7 @@ void main() {
         when(mockVideoEventService.getVideosByAuthor(testPubkey))
             .thenReturn([initialVideo]);
 
-        final controller = StreamController<NostrEvent>();
+        final controller = StreamController<Event>();
         when(mockNostrService.subscribeToEvents(filters: anyNamed('filters')))
             .thenAnswer((_) => controller.stream);
 

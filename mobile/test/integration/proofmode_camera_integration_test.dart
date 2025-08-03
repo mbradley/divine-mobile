@@ -401,8 +401,9 @@ void main() {
         
         // Verify that human detection would flag this as suspicious
         final interactions = result.proofManifest!['interactions'] as List<dynamic>? ?? [];
+        final userInteractions = interactions.cast<UserInteractionProof>();
         final analysis = ProofModeHumanDetection.analyzeInteractions(
-          interactions
+          userInteractions
         );
         
         expect(analysis.isHumanLikely, isFalse);

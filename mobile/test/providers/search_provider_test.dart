@@ -25,8 +25,7 @@ void main() {
       
       // Setup basic mocks
       when(mockVideoEventService.searchResults).thenReturn([]);
-      when(mockVideoEventService.isSearching).thenReturn(false);
-      when(mockVideoEventService.searchQuery).thenReturn(null);
+      // Note: isSearching and searchQuery properties removed during embedded relay refactor
       
       container = ProviderContainer(
         overrides: [

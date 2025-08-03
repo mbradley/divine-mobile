@@ -324,9 +324,7 @@ void main() {
 
     test('Multiple relays AUTH state tracking', () async {
       final testRelays = [
-        'wss://relay3.openvine.co',
-        'wss://relay.damus.io', // Non-auth relay for comparison
-        'wss://nos.lol', // Another relay
+        'wss://localhost:8080', // Embedded relay
       ];
 
       nostrService.setAuthTimeout(const Duration(seconds: 30));

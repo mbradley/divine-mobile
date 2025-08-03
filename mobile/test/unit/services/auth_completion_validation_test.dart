@@ -46,7 +46,7 @@ void main() {
 
       // Test relay authentication check with non-existent relay
       expect(services.nostrService.isRelayAuthenticated('wss://nonexistent.relay'), isFalse);
-      expect(services.nostrService.isRelayAuthenticated('wss://relay3.openvine.co'), isFalse);
+      expect(services.nostrService.isRelayAuthenticated('wss://localhost:8080'), isFalse);
     });
 
     test('AUTH state stream notifies listeners', () async {
@@ -118,14 +118,12 @@ void main() {
       expect(sessionTimeout.inHours, equals(24));
       
       // The authentication check should handle expired sessions
-      expect(services.nostrService.isRelayAuthenticated('wss://relay3.openvine.co'), isFalse);
+      expect(services.nostrService.isRelayAuthenticated('wss://localhost:8080'), isFalse);
     });
 
     test('Multiple relay AUTH state management', () {
       final testRelays = [
-        'wss://relay3.openvine.co',
-        'wss://relay.damus.io',
-        'wss://nos.lol',
+        'wss://localhost:8080', // Embedded relay
       ];
 
       // Each relay should be checkable independently

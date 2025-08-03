@@ -5,12 +5,16 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:http/http.dart' as http;
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/models/pending_upload.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 import '../helpers/pipeline_test_factory.dart';
+
+// Fake class for BaseRequest
+class FakeBaseRequest extends Fake implements http.BaseRequest {}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -38,6 +42,9 @@ void main() {
       
       // Register Event fallback for mocktail
       registerFallbackValue(Event('0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef', 22, [], 'test'));
+      
+      // Register BaseRequest fallback for http mocking
+      registerFallbackValue(FakeBaseRequest());
     });
 
     tearDownAll(() async {
@@ -162,11 +169,17 @@ void main() {
       // Verify NIP-94 tag generation
       final nip94Tags = readyEvent.nip94Tags;
       expect(nip94Tags, isNotEmpty);
-      expect(nip94Tags,
-          contains(['url', 'https://demo.cloudinary.com/video.mp4']));
-      expect(nip94Tags, contains(['m', 'video/mp4']));
-      expect(nip94Tags, contains(['dim', '1920x1080']));
-      expect(nip94Tags, contains(['duration', '6'])); // Rounded from 5.5
+      
+      // Check tags by finding them in the list
+      final hasUrlTag = nip94Tags.any((tag) => tag.length >= 2 && tag[0] == 'url' && tag[1] == 'https://demo.cloudinary.com/video.mp4');
+      final hasMimeTag = nip94Tags.any((tag) => tag.length >= 2 && tag[0] == 'm' && tag[1] == 'video/mp4');
+      final hasDimTag = nip94Tags.any((tag) => tag.length >= 2 && tag[0] == 'dim' && tag[1] == '1920x1080');
+      final hasDurationTag = nip94Tags.any((tag) => tag.length >= 2 && tag[0] == 'duration' && tag[1] == '6');
+      
+      expect(hasUrlTag, isTrue, reason: 'Should contain URL tag');
+      expect(hasMimeTag, isTrue, reason: 'Should contain MIME type tag');
+      expect(hasDimTag, isTrue, reason: 'Should contain dimensions tag');
+      expect(hasDurationTag, isTrue, reason: 'Should contain duration tag');
 
       Log.debug('  ✅ NIP-94 tags generated: ${nip94Tags.length} tags');
 

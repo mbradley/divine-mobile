@@ -18,7 +18,7 @@ class MinimalMockNostrService implements INostrService {
   bool get isDisposed => false;
 
   @override
-  List<String> get connectedRelays => ['wss://relay.example.com'];
+  List<String> get connectedRelays => ['wss://localhost:8080'];
 
   @override
   String? get publicKey => null;
@@ -36,7 +36,7 @@ class MinimalMockNostrService implements INostrService {
   int get connectedRelayCount => 1;
 
   @override
-  List<String> get relays => ['wss://relay.example.com'];
+  List<String> get relays => ['wss://localhost:8080'];
 
   @override
   Map<String, dynamic> get relayStatuses => {};

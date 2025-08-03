@@ -16,7 +16,7 @@ void main() {
       mockSocket = MockWebSocket();
       mockFactory.socket = mockSocket;
       manager = WebSocketConnectionManager(
-        url: 'wss://relay.example.com',
+        url: 'wss://localhost:8080',
         socketFactory: mockFactory,
       );
     });
