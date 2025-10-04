@@ -396,8 +396,11 @@ class _ProfileScreenScrollableState
     // Watch the profile videos notifier state for reactive updates
     final profileVideosState = ref.watch(profileVideosProvider);
 
+    Log.debug('🎯 ProfileScreen build: isLoading=${profileVideosState.isLoading}, videoCount=${profileVideosState.videos.length}, hasError=${profileVideosState.hasError}',
+        name: 'ProfileScreen', category: LogCategory.video);
+
     // Convert notifier state to AsyncValue for compatibility with existing UI code
-    final profileVideosAsync = profileVideosState.isLoading && profileVideosState.videos.isEmpty
+    final profileVideosAsync = profileVideosState.isLoading
         ? const AsyncValue<List<VideoEvent>>.loading()
         : profileVideosState.hasError
             ? AsyncValue<List<VideoEvent>>.error(profileVideosState.error!, StackTrace.current)
