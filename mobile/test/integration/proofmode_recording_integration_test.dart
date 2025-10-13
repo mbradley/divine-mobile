@@ -1,7 +1,9 @@
 // ABOUTME: Integration tests for ProofMode session lifecycle during video recording
 // ABOUTME: Tests ProofModeSessionService integration with VineRecordingController
 
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/services.dart';
 import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
 import 'package:openvine/services/proofmode_session_service.dart' as proofmode;
@@ -9,14 +11,63 @@ import 'package:openvine/services/vine_recording_controller.dart';
 
 // Generate mocks
 @GenerateMocks([proofmode.ProofModeSessionService])
-import 'proofmode_recording_integration_test.mocks.dart';
+import 'proofmode_recording_integration_test.mocks.g.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('ProofMode Recording Integration', () {
     late MockProofModeSessionService mockProofModeService;
+    late File testVideoFile;
 
-    setUp(() {
+    setUp(() async {
       mockProofModeService = MockProofModeSessionService();
+
+      // Create a minimal test video file for finishRecording() to hash
+      testVideoFile = File('/tmp/test_recording.mov');
+      await testVideoFile.writeAsBytes([
+        // Minimal MP4/MOV header (ftyp atom)
+        0x00, 0x00, 0x00, 0x20, 0x66, 0x74, 0x79, 0x70, // ftyp header
+        0x69, 0x73, 0x6F, 0x6D, 0x00, 0x00, 0x02, 0x00, // isom brand
+        0x69, 0x73, 0x6F, 0x6D, 0x69, 0x73, 0x6F, 0x32, // compatible brands
+        0x61, 0x76, 0x63, 0x31, 0x6D, 0x70, 0x34, 0x31, // more brands
+      ]);
+
+      // Mock native camera interface for testing
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+        const MethodChannel('openvine/native_camera'),
+        (MethodCall methodCall) async {
+          switch (methodCall.method) {
+            case 'initialize':
+              return true;
+            case 'startPreview':
+              return true;
+            case 'startRecording':
+              return true;
+            case 'stopRecording':
+              return testVideoFile.path;
+            case 'finishRecording':
+              return testVideoFile.path;
+            default:
+              return null;
+          }
+        },
+      );
+    });
+
+    tearDown(() async {
+      // Clean up test video file
+      if (await testVideoFile.exists()) {
+        await testVideoFile.delete();
+      }
+
+      // Clean up mock camera handler
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+        const MethodChannel('openvine/native_camera'),
+        null,
+      );
     });
 
     test('startRecording initiates ProofMode session on first segment', () async {
@@ -26,12 +77,20 @@ void main() {
       when(mockProofModeService.startRecordingSegment())
           .thenAnswer((_) async => {});
 
-      // TODO: Create VineRecordingController with mockProofModeService
-      // TODO: Call startRecording()
+      // Act: Create controller with ProofMode and start recording
+      final controller = VineRecordingController(
+        proofModeSession: mockProofModeService,
+      );
+
+      await controller.initialize();
+      await controller.startRecording();
 
       // Assert: Verify ProofMode session was started
       verify(mockProofModeService.startSession()).called(1);
       verify(mockProofModeService.startRecordingSegment()).called(1);
+
+      // Cleanup
+      controller.dispose();
     });
 
     test('stopRecording stops ProofMode segment', () async {
@@ -43,11 +102,20 @@ void main() {
       when(mockProofModeService.stopRecordingSegment())
           .thenAnswer((_) async => {});
 
-      // TODO: Create controller and start recording
-      // TODO: Call stopRecording()
+      // Act: Create controller, start recording, then stop
+      final controller = VineRecordingController(
+        proofModeSession: mockProofModeService,
+      );
+
+      await controller.initialize();
+      await controller.startRecording();
+      await controller.stopRecording();
 
       // Assert: Verify segment was stopped
       verify(mockProofModeService.stopRecordingSegment()).called(1);
+
+      // Cleanup
+      controller.dispose();
     });
 
     test('finishRecording returns video File and ProofManifest', () async {
@@ -73,33 +141,56 @@ void main() {
 
       when(mockProofModeService.startSession())
           .thenAnswer((_) async => 'test-session-123');
+      when(mockProofModeService.startRecordingSegment())
+          .thenAnswer((_) async => {});
+      when(mockProofModeService.stopRecordingSegment())
+          .thenAnswer((_) async => {});
       when(mockProofModeService.finalizeSession(any))
           .thenAnswer((_) async => mockManifest);
 
-      // TODO: Create controller, record, and finish
-      // TODO: Call finishRecording()
+      // Act: Create controller, record, and finish
+      final controller = VineRecordingController(
+        proofModeSession: mockProofModeService,
+      );
+
+      await controller.initialize();
+      await controller.startRecording();
+      await controller.stopRecording();
+      final result = await controller.finishRecording();
 
       // Assert: Should return tuple (File?, ProofManifest?)
-      // expect(result.$1, isNotNull); // File
-      // expect(result.$2, equals(mockManifest)); // ProofManifest
+      final (videoFile, proofManifest) = result;
+      expect(videoFile, isNotNull); // File
+      expect(proofManifest, equals(mockManifest)); // ProofManifest
 
       // Verify ProofMode session was finalized with video hash
       verify(mockProofModeService.finalizeSession(any)).called(1);
+
+      // Cleanup
+      controller.dispose();
     });
 
     test('recording works without ProofMode service (null service)', () async {
-      // Arrange: Create controller with null ProofMode service
-      // TODO: Create VineRecordingController with proofModeService: null
+      // Arrange & Act: Create controller with null ProofMode service
+      final controller = VineRecordingController(
+        proofModeSession: null,
+      );
 
-      // Act: Record and finish without ProofMode
-      // TODO: Call startRecording(), stopRecording(), finishRecording()
+      await controller.initialize();
+      await controller.startRecording();
+      await controller.stopRecording();
+      final result = await controller.finishRecording();
 
       // Assert: Should return video File but null ProofManifest
-      // expect(result.$1, isNotNull); // File exists
-      // expect(result.$2, isNull); // No ProofManifest
+      final (videoFile, proofManifest) = result;
+      expect(videoFile, isNotNull); // File exists
+      expect(proofManifest, isNull); // No ProofManifest
 
       // Verify no ProofMode methods were called (service is null)
       // Note: No verification needed since service is null
+
+      // Cleanup
+      controller.dispose();
     });
 
     test('ProofMode session survives pause and resume cycle', () async {
@@ -115,12 +206,22 @@ void main() {
       when(mockProofModeService.resumeRecording())
           .thenAnswer((_) async => {});
 
-      // TODO: Create controller and start first segment
-      // TODO: Call startRecording() → stopRecording() → startRecording() again
+      // Act: Create controller and do pause/resume cycle
+      final controller = VineRecordingController(
+        proofModeSession: mockProofModeService,
+      );
+
+      await controller.initialize();
+      await controller.startRecording();  // First segment
+      await controller.stopRecording();
+      await controller.startRecording();  // Resume/second segment
 
       // Assert: Verify stop and start were called for pause/resume cycle
       verify(mockProofModeService.stopRecordingSegment()).called(1);
       verify(mockProofModeService.startRecordingSegment()).called(greaterThan(1));
+
+      // Cleanup
+      controller.dispose();
     });
 
     test('ProofMode session handles recording errors gracefully', () async {
@@ -128,17 +229,31 @@ void main() {
       when(mockProofModeService.startSession())
           .thenThrow(Exception('ProofMode initialization failed'));
 
-      // TODO: Create controller with failing ProofMode service
-      // TODO: Call startRecording() and expect it to complete without throwing
+      // Act: Create controller with failing ProofMode service
+      final controller = VineRecordingController(
+        proofModeSession: mockProofModeService,
+      );
+
+      await controller.initialize();
+
+      // Should not throw - recording continues despite ProofMode failure
+      await controller.startRecording();
 
       // Assert: Recording should continue even if ProofMode fails
-      // expect(controller.state, equals(VineRecordingState.recording));
+      expect(controller.state, equals(VineRecordingState.recording));
+
+      // Cleanup
+      controller.dispose();
     });
 
     test('finishRecording calculates SHA256 hash of final video', () async {
       // Arrange
       when(mockProofModeService.startSession())
           .thenAnswer((_) async => 'test-session-123');
+      when(mockProofModeService.startRecordingSegment())
+          .thenAnswer((_) async => {});
+      when(mockProofModeService.stopRecordingSegment())
+          .thenAnswer((_) async => {});
       when(mockProofModeService.finalizeSession(any))
           .thenAnswer((_) async {
         final testTime = DateTime.now();
@@ -154,8 +269,15 @@ void main() {
         );
       });
 
-      // TODO: Create controller and record video
-      // TODO: Call finishRecording()
+      // Act: Create controller and record video
+      final controller = VineRecordingController(
+        proofModeSession: mockProofModeService,
+      );
+
+      await controller.initialize();
+      await controller.startRecording();
+      await controller.stopRecording();
+      await controller.finishRecording();
 
       // Assert: Verify finalizeSession was called with a non-empty videoHash
       final captured = verify(mockProofModeService.finalizeSession(
@@ -166,6 +288,9 @@ void main() {
       expect(captured[0], isNotNull);
       expect(captured[0], isNotEmpty);
       expect(captured[0], matches(RegExp(r'^[a-f0-9]{64}$'))); // SHA256 hex format
+
+      // Cleanup
+      controller.dispose();
     });
   });
 }
