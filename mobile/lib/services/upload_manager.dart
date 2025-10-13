@@ -568,8 +568,11 @@ class UploadManager {
     final metrics = _uploadMetrics[upload.id];
 
     if (result.success == true) {
+      // Get the LATEST upload record from Hive (may have been updated with thumbnail URL)
+      final latestUpload = getUpload(upload.id) ?? upload;
+
       // Create updated upload with success metadata
-      final updatedUpload = _createSuccessfulUpload(upload, result);
+      final updatedUpload = _createSuccessfulUpload(latestUpload, result);
       await _updateUpload(updatedUpload);
 
       // Record successful metrics
