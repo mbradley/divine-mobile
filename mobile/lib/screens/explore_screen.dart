@@ -116,6 +116,14 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
       tabName: tabName,
     );
 
+    // Refresh editor's picks when that tab becomes active
+    // This ensures the provider checks for newly fetched videos
+    if (_tabController.index == 2) { // Editor's Pick tab
+      Log.debug('🔄 Refreshing editor\'s picks provider on tab change',
+          category: LogCategory.video);
+      ref.read(curationProvider.notifier).refreshAll();
+    }
+
     // Exit feed or hashtag mode when user switches tabs
     _resetToDefaultState();
   }

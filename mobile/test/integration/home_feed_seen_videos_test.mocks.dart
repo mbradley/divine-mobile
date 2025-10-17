@@ -656,6 +656,13 @@ class MockVideoEventService extends _i1.Mock implements _i2.VideoEventService {
   );
 
   @override
+  void handleEventForTesting(_i7.Event? event, _i2.SubscriptionType? type) =>
+      super.noSuchMethod(
+        Invocation.method(#handleEventForTesting, [event, type]),
+        returnValueForMissingStub: null,
+      );
+
+  @override
   void addListener(_i8.VoidCallback? listener) => super.noSuchMethod(
     Invocation.method(#addListener, [listener]),
     returnValueForMissingStub: null,
