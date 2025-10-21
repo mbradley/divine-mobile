@@ -177,15 +177,10 @@ class UnifiedLogger {
     Object? error,
     StackTrace? stackTrace,
   }) {
-    // Check if this level should be logged
-    if (!isLevelEnabled(level)) {
-      return;
-    }
-
-    // Check if this category should be logged (if category specified)
-    if (category != null && !isCategoryEnabled(category)) {
-      return;
-    }
+    // Check if this message should be printed to console
+    // Category/level filtering applies ONLY to console output (noise reduction)
+    final shouldPrintToConsole = isLevelEnabled(level) &&
+        (category == null || isCategoryEnabled(category));
 
     // Create timestamp
     final now = DateTime.now();
@@ -198,21 +193,26 @@ class UnifiedLogger {
     // Format message with timestamp and category
     final timestampedMessage = '[$timestamp] $categoryPrefix$message';
 
-    // Always output to Flutter tool console via debugPrint
-    debugPrint(timestampedMessage);
+    // Output to console ONLY if category/level filters allow it
+    if (shouldPrintToConsole) {
+      // Always output to Flutter tool console via debugPrint
+      debugPrint(timestampedMessage);
 
-    // Also output to browser DevTools via developer.log (web only)
-    if (kIsWeb) {
-      developer.log(
-        timestampedMessage,
-        name: name ?? 'divine',
-        level: level.value,
-        error: error,
-        stackTrace: stackTrace,
-      );
+      // Also output to browser DevTools via developer.log (web only)
+      if (kIsWeb) {
+        developer.log(
+          timestampedMessage,
+          name: name ?? 'divine',
+          level: level.value,
+          error: error,
+          stackTrace: stackTrace,
+        );
+      }
     }
 
-    // Capture log entry for bug reports (fire-and-forget to avoid blocking)
+    // CRITICAL: ALWAYS capture to file regardless of category/level filtering
+    // Console filtering is for noise reduction during development
+    // File capture must be comprehensive for debugging remote user issues
     try {
       final logEntry = LogEntry(
         timestamp: now,

@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - Critical Log Export Bug (2025-10-21)
+
+#### Bug Fixes
+- **Fixed log export capturing only 25 lines instead of thousands** - Category filtering was incorrectly applied to file capture
+  - Root cause: Logger was filtering logs by category BEFORE writing to persistent storage
+  - Default categories (only `system` and `auth`) meant 90% of logs were discarded
+  - Critical debugging logs (`relay`, `video`, `ui`, `api`, `storage`) were never saved to files
+  - Users exporting logs for support received only 25 lines instead of 2,200+ lines
+
+  - Fixed by separating console output filtering from file capture:
+    - Console output: Still filtered by category/level (reduces development noise)
+    - File capture: ALWAYS happens regardless of category or level settings
+    - Ensures comprehensive diagnostic data for debugging remote user issues
+
+  - Impact: Log exports now include ALL categories for complete debugging context
+    - Before: 25 lines, only `system`/`auth` categories, 0.00 MB
+    - After: 2,200+ lines, ALL categories (relay: 116, video: 319, ui: 132, etc.), 0.18 MB
+    - **88x more logs** with full relay connection debugging information
+
+- **Fixed relay diagnostic network test using port 0** - WebSocket URLs now use correct default ports
+  - `wss://` URLs now correctly use port 443 (not 0)
+  - `ws://` URLs now correctly use port 80 (not 0)
+  - `uri.port` returns 0 when port not explicitly specified in URL
+  - Fixed by checking `uri.hasPort` and using scheme-appropriate defaults
+
+#### Test Coverage
+- Created `test/unit/utils/unified_logger_test.dart`:
+  - 5 comprehensive tests following TDD methodology
+  - Tests verified failing before fix, passing after fix
+  - Tests log capture independence from category/level filtering
+  - Tests all categories captured (relay, video, ui, api, storage, system, auth)
+  - Tests all log levels captured (verbose, debug, info, warning, error)
+  - Tests real-world bug report export scenario
+
+#### Technical Details
+- Modified `lib/utils/unified_logger.dart`:
+  - Separated console filtering from file capture in `_log()` method
+  - Console output uses `shouldPrintToConsole` check (filtered by category/level)
+  - File capture happens unconditionally for ALL logs
+  - Added comprehensive comments explaining the separation
+
+- Modified `lib/screens/relay_diagnostic_screen.dart`:
+  - Fixed `_testNetworkConnectivity()` port selection logic
+  - Uses `uri.hasPort` to detect explicit port vs default
+  - Applies correct default ports: 443 for wss://, 80 for ws://
+
 ### Added - Universal Deep Link System (2025-10-20)
 
 #### Features

@@ -85,9 +85,10 @@ class _RelayDiagnosticScreenState extends ConsumerState<RelayDiagnosticScreen> {
         // Extract hostname from WebSocket URL
         final uri = Uri.parse(relayUrl);
         final host = uri.host;
-        final port = uri.port;
+        // Use default ports if not explicitly specified (uri.port returns 0 if not set)
+        final port = uri.hasPort ? uri.port : (uri.scheme == 'wss' ? 443 : 80);
 
-        Log.info('Testing connectivity to $host:$port',
+        Log.info('Testing connectivity to $host:$port (scheme=${uri.scheme})',
             name: 'RelayDiagnostic');
 
         // Test TCP connection
