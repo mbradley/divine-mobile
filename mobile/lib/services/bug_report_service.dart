@@ -2,10 +2,12 @@
 // ABOUTME: Gathers device info, logs, errors and sanitizes sensitive data before transmission
 
 import 'dart:convert';
-import 'dart:io';
+import 'dart:io' show File;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 import 'package:openvine/config/bug_report_config.dart';
 import 'package:openvine/models/bug_report_data.dart';
@@ -16,6 +18,8 @@ import 'package:openvine/services/error_analytics_tracker.dart';
 import 'package:openvine/services/proofmode_attestation_service.dart';
 import 'package:openvine/services/nip17_message_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
+// Conditional import: dart:html on web, stub on native
+import 'dart:html' if (dart.library.io) 'package:openvine/services/bug_report_service_stub.dart' as html;
 
 /// Service for creating and managing bug reports
 class BugReportService {
@@ -206,6 +210,65 @@ class BugReportService {
     }
   }
 
+  /// Send bug report via email using the system's default email client
+  Future<BugReportResult> sendBugReportViaEmail(BugReportData data) async {
+    try {
+      Log.info('Opening email client for bug report ${data.reportId}',
+          category: LogCategory.system);
+
+      // Sanitize sensitive data before sending
+      final sanitizedData = sanitizeSensitiveData(data);
+
+      // Create email subject
+      final subject = Uri.encodeComponent(
+        'OpenVine Bug Report: ${sanitizedData.reportId}',
+      );
+
+      // Create email body with formatted report
+      final body = Uri.encodeComponent(
+        sanitizedData.toFormattedReport(),
+      );
+
+      // Construct mailto URL
+      final emailUrl = 'mailto:${BugReportConfig.supportEmail}?subject=$subject&body=$body';
+
+      // Try to launch email client
+      final uri = Uri.parse(emailUrl);
+      final canLaunch = await canLaunchUrl(uri);
+
+      if (canLaunch) {
+        final launched = await launchUrl(uri);
+        if (launched) {
+          Log.info('Email client opened successfully', category: LogCategory.system);
+          return BugReportResult(
+            success: true,
+            reportId: data.reportId,
+            timestamp: DateTime.now(),
+          );
+        } else {
+          Log.warning('Failed to launch email client', category: LogCategory.system);
+          return BugReportResult.failure(
+            'Could not open email client',
+            reportId: data.reportId,
+          );
+        }
+      } else {
+        Log.warning('No email client available on device', category: LogCategory.system);
+        return BugReportResult.failure(
+          'No email client found. Please install an email app.',
+          reportId: data.reportId,
+        );
+      }
+    } catch (e, stackTrace) {
+      Log.error('Exception while opening email client: $e',
+          category: LogCategory.system, error: e, stackTrace: stackTrace);
+      return BugReportResult.failure(
+        'Failed to open email: $e',
+        reportId: data.reportId,
+      );
+    }
+  }
+
   /// Export logs to a file and share via system share dialog
   /// Returns true if successful, false otherwise
   Future<bool> exportLogsToFile({
@@ -257,11 +320,53 @@ class BugReportService {
       }
 
       final content = buffer.toString();
-
-      // Get temporary directory
-      final tempDir = await getTemporaryDirectory();
       final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-');
       final fileName = 'openvine_full_logs_$timestamp.txt';
+
+      // Platform-specific export
+      if (kIsWeb) {
+        // Web: Use browser download API
+        return _exportLogsWeb(content, fileName, allLogLines.length);
+      } else {
+        // Native: Use file sharing
+        return _exportLogsNative(content, fileName, allLogLines.length);
+      }
+    } catch (e, stackTrace) {
+      Log.error('Failed to export logs: $e',
+          category: LogCategory.system, error: e, stackTrace: stackTrace);
+      return false;
+    }
+  }
+
+  /// Export logs on web platform using browser download
+  bool _exportLogsWeb(String content, String fileName, int lineCount) {
+    try {
+      final bytes = utf8.encode(content);
+      final blob = html.Blob([bytes], 'text/plain');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+
+      html.AnchorElement(href: url)
+        ..setAttribute('download', fileName)
+        ..click();
+
+      html.Url.revokeObjectUrl(url);
+
+      final sizeMB = (bytes.length / (1024 * 1024)).toStringAsFixed(2);
+      Log.info('Logs downloaded via browser: $fileName ($sizeMB MB, $lineCount lines)',
+          category: LogCategory.system);
+      return true;
+    } catch (e, stackTrace) {
+      Log.error('Failed to download logs on web: $e',
+          category: LogCategory.system, error: e, stackTrace: stackTrace);
+      return false;
+    }
+  }
+
+  /// Export logs on native platforms using file sharing
+  Future<bool> _exportLogsNative(String content, String fileName, int lineCount) async {
+    try {
+      // Get temporary directory
+      final tempDir = await getTemporaryDirectory();
       final filePath = '${tempDir.path}/$fileName';
 
       // Write to file
@@ -269,7 +374,7 @@ class BugReportService {
       await file.writeAsString(content);
 
       final fileSizeMB = (await file.length() / (1024 * 1024)).toStringAsFixed(2);
-      Log.info('Comprehensive logs written to file: $filePath ($fileSizeMB MB, ${allLogLines.length} lines)',
+      Log.info('Comprehensive logs written to file: $filePath ($fileSizeMB MB, $lineCount lines)',
           category: LogCategory.system);
 
       // Share the file
@@ -277,7 +382,7 @@ class BugReportService {
         ShareParams(
           files: [XFile(filePath)],
           subject: 'OpenVine Full Logs',
-          text: 'OpenVine comprehensive diagnostic logs (${allLogLines.length} entries, $fileSizeMB MB)',
+          text: 'OpenVine comprehensive diagnostic logs ($lineCount entries, $fileSizeMB MB)',
         ),
       );
 
@@ -290,7 +395,7 @@ class BugReportService {
         return false;
       }
     } catch (e, stackTrace) {
-      Log.error('Failed to export logs: $e',
+      Log.error('Failed to export logs on native platform: $e',
           category: LogCategory.system, error: e, stackTrace: stackTrace);
       return false;
     }
