@@ -15,6 +15,9 @@ class EventRouter {
 
   final AppDatabase _db;
 
+  /// Access to database for cache-first queries
+  AppDatabase get db => _db;
+
   /// Handle incoming event from relay
   ///
   /// Step 1: Insert ALL events to nostr_events table

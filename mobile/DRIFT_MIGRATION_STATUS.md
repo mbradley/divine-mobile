@@ -2,7 +2,7 @@
 
 **Branch**: `feature/drift-database-migration`
 **Last Updated**: 2025-10-23
-**Status**: ✅ **Phases 1-4 Complete** (48/48 tests passing)
+**Status**: ✅ **Phases 1-4 + 3.3 Complete** (60/60 tests passing)
 
 ---
 
@@ -10,10 +10,11 @@
 
 Successfully implemented Drift reactive database migration with:
 - **94.7% code reduction** for UserProfile caching (528 → 28 lines)
-- **48/48 new tests passing** (100% test coverage on new code)
+- **60/60 new tests passing** (100% test coverage on new code)
 - **Zero analyzer issues** in all new code
 - **6000+ lines** of type-safe generated Drift code
 - **Safe, idempotent migration** from Hive to Drift
+- **Cache-first query strategy** for instant UI feedback
 
 ---
 
@@ -91,6 +92,66 @@ Nostr Event → EventRouter.handleEvent()
 
 ---
 
+### Phase 3.3: Cache-First Query Strategy ✅ (12 tests)
+
+**Commit**: TBD (current work)
+
+**Update 2025-10-23**: Fixed test infrastructure issue where `toHex64()` helper was creating invalid Nostr keys. Updated helper to repeat hex patterns instead of padding with zeros. All 12 cache-first tests now passing.
+
+**Deliverables**:
+1. **NostrEventsDao.getVideoEventsByFilter()** - Dynamic filter-based queries
+   - Supports kinds, authors, hashtags, time ranges, limits
+   - Case-insensitive hashtag matching
+   - Proper SQL parameterization (injection-safe)
+   - Returns events sorted by created_at DESC
+
+2. **VideoEventService._loadCachedEvents()** - Cache-first helper
+   - Queries Drift database before relay subscription
+   - Maps filter parameters correctly
+   - Graceful error handling
+   - Returns empty list if EventRouter not initialized
+
+3. **Cache-First Integration** - Instant UI feedback
+   - Loads cached events BEFORE relay EOSE
+   - Processes cached events through same flow as relay events
+   - Notifies UI immediately with cached results
+   - Deduplicates between cache and relay
+
+**Architecture Flow**:
+```
+User opens feed → subscribeToVideoFeed()
+    ↓
+    1. Query Drift database (instant results)
+    2. Process cached events → notifyListeners()
+    3. UI updates immediately ⚡
+    4. Subscribe to relay (background)
+    5. Relay events arrive → merge with cache
+    6. UI updates with fresh data
+```
+
+**User Experience Impact**:
+- **Before**: Blank screen → wait for EOSE → videos appear
+- **After**: Videos appear instantly → fresh data streams in
+
+**Test Coverage**:
+- ✅ DAO filter queries (7/7):
+  - Kind filtering
+  - Author filtering
+  - Hashtag filtering (case-insensitive)
+  - Time range filtering (since/until)
+  - Combined filters
+  - Limit parameter
+  - Sort order verification
+
+- ✅ VideoEventService integration (5/5):
+  - Cached events delivered before EOSE
+  - Relay events merge without duplicates
+  - Author filter works with cache
+  - Hashtag filter works with cache
+  - Empty cache doesn't break relay subscription
+
+---
+
 ### Phase 4: Hive Migration ✅ (18 tests)
 
 **Commit**: `6679ce7`
@@ -153,7 +214,7 @@ Stream<UserProfile?> userProfile(Ref ref, String pubkey) {
 - Total: **28 lines**
 
 ### Test Coverage
-- **48 new tests** (100% passing)
+- **60 new tests** (100% passing)
 - **6000+ lines** of generated type-safe code
 - **Zero analyzer issues** in new code
 
@@ -188,18 +249,13 @@ Stream<UserProfile?> userProfile(Ref ref, String pubkey) {
 
 These are ready but NOT integrated with the app:
 
-### Phase 3: VideoEventService Integration
-- EventRouter exists but not wired to VideoEventService
-- Old event caching still in use
-- **Reason**: Parallel operation for safety
-
 ### Phase 5: Feature Flags
 - Feature flag system not implemented
 - All code uses old providers
 - **Reason**: Gradual rollout not started
 
 ### Phase 6: Full Test Suite
-- Only new code tested (48 tests)
+- Only new code tested (60 tests)
 - Existing test suite not run against Drift
 - **Reason**: Integration not started
 
@@ -213,7 +269,7 @@ These are ready but NOT integrated with the app:
 
 ## 📝 Files Created/Modified
 
-### New Files (13)
+### New Files (15)
 ```
 lib/database/app_database.dart
 lib/database/tables.dart
@@ -228,10 +284,12 @@ lib/providers/user_profile_drift_provider.dart
 test/infrastructure/drift_setup_test.dart
 test/infrastructure/schema_test.dart
 test/dao/user_profiles_dao_test.dart
+test/dao/nostr_events_dao_test.dart
 test/providers/database_provider_test.dart
 test/providers/user_profile_drift_provider_test.dart
 test/services/event_router_test.dart
 test/migration/hive_to_drift_migration_test.dart
+test/integration/cache_first_query_test.dart
 ```
 
 ### Generated Files (5)
@@ -245,15 +303,7 @@ lib/providers/user_profile_drift_provider.g.dart
 
 ---
 
-## 🎯 Next Steps (Phase 3-6)
-
-### Phase 3: VideoEventService Integration
-**Goal**: Wire EventRouter into existing event flow
-
-1. Add EventRouter to VideoEventService
-2. Route all incoming events through EventRouter
-3. Query database before requesting from relay
-4. Test integration with existing video feed
+## 🎯 Next Steps (Phase 5-7)
 
 ### Phase 5: Feature Flags
 **Goal**: Gradual rollout capability
@@ -285,12 +335,12 @@ lib/providers/user_profile_drift_provider.g.dart
 
 ### Current Test Coverage
 All new code is fully tested:
-- ✅ Unit tests (48/48 passing)
+- ✅ Unit tests (60/60 passing)
 - ✅ Integration tests (DAO ↔ Database)
+- ✅ Cache-first integration tests (VideoEventService ↔ DAO)
 - ✅ Migration tests (Hive → Drift)
 
 ### Not Yet Tested
-- ❌ Integration with VideoEventService
 - ❌ Integration with existing Riverpod providers
 - ❌ Platform-specific testing (web, iOS, Android)
 - ❌ Performance benchmarks

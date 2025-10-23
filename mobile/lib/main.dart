@@ -14,6 +14,8 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/deep_link_service.dart';
+import 'package:openvine/services/migration_service.dart';
+import 'package:openvine/database/app_database.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/router/route_normalization_provider.dart';
 import 'package:openvine/services/logging_config_service.dart';
@@ -224,6 +226,23 @@ Future<void> _startOpenVineApp() async {
   StartupPerformanceService.instance.startPhase('hive_storage');
   await Hive.initFlutter();
   StartupPerformanceService.instance.completePhase('hive_storage');
+
+  // Run Hive → Drift migration if needed
+  StartupPerformanceService.instance.startPhase('data_migration');
+  try {
+    final db = AppDatabase();
+    final migrationService = MigrationService(db);
+    await migrationService.runMigrations();
+    Log.info('[MIGRATION] ✅ Data migration complete',
+        name: 'Main', category: LogCategory.system);
+  } catch (e, stack) {
+    // Don't block app startup on migration failures
+    Log.error('[MIGRATION] ❌ Migration failed (non-critical): $e',
+        name: 'Main', category: LogCategory.system);
+    Log.verbose('[MIGRATION] Stack: $stack',
+        name: 'Main', category: LogCategory.system);
+  }
+  StartupPerformanceService.instance.completePhase('data_migration');
 
   // Initialize SharedPreferences for feature flags
   StartupPerformanceService.instance.startPhase('shared_preferences');
