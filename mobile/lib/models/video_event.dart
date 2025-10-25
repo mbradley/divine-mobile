@@ -98,8 +98,6 @@ class VideoEvent {
 
       switch (tagName) {
         case 'url':
-          print('🔍 TEST DEBUG: Found url tag with tagValue="$tagValue"');
-          print('🔍 TEST DEBUG: isEmpty=${tagValue.isEmpty}, isValid=${_isValidVideoUrl(tagValue)}');
           developer.log('🔍 DEBUG: Found url tag with value: $tagValue',
               name: 'VideoEvent');
           // Check if this is a valid video URL
@@ -113,14 +111,11 @@ class VideoEvent {
                   name: 'VideoEvent');
               videoUrlCandidates.add(fixedUrl);
             } else {
-              print('🔍 TEST DEBUG: Adding URL to candidates: $tagValue');
               videoUrlCandidates.add(tagValue);
-              print('🔍 TEST DEBUG: Candidates list now has ${videoUrlCandidates.length} items');
               developer.log('✅ Added video URL candidate from url tag: $tagValue',
                   name: 'VideoEvent');
             }
           } else {
-            print('🔍 TEST DEBUG: URL rejected as invalid');
             developer.log('⚠️ WARNING: Invalid URL in url tag: $tagValue',
                 name: 'VideoEvent');
           }
@@ -336,11 +331,8 @@ class VideoEvent {
     }
 
     // Select best video URL from all candidates
-    print('🔍 TEST DEBUG: Processing candidates. Count=${videoUrlCandidates.length}');
     if (videoUrlCandidates.isNotEmpty) {
-      print('🔍 TEST DEBUG: Candidates list: $videoUrlCandidates');
       videoUrl = _selectBestVideoUrl(videoUrlCandidates);
-      print('🔍 TEST DEBUG: Selected videoUrl=$videoUrl');
       developer.log(
           '🎯 Selected best video URL from ${videoUrlCandidates.length} candidates: $videoUrl',
           name: 'VideoEvent');
@@ -916,7 +908,6 @@ class VideoEvent {
 
   /// Select the best video URL from multiple candidates
   static String? _selectBestVideoUrl(List<String> candidates) {
-    print('🔍 TEST DEBUG: _selectBestVideoUrl called with ${candidates.length} candidates');
     if (candidates.isEmpty) return null;
 
     // Score all candidates and pick the highest scoring one
@@ -924,15 +915,11 @@ class VideoEvent {
     int bestScore = -1;
 
     for (final url in candidates) {
-      print('🔍 TEST DEBUG: Checking candidate: $url');
       final isValid = _isValidVideoUrl(url);
-      print('🔍 TEST DEBUG: isValid=$isValid');
       if (isValid) {
         final score = _scoreVideoUrl(url);
-        print('🔍 TEST DEBUG: score=$score, bestScore=$bestScore');
         developer.log('🎯 URL score: $score for $url', name: 'VideoEvent');
         if (score > bestScore) {
-          print('🔍 TEST DEBUG: New best! Setting bestUrl=$url, bestScore=$score');
           bestScore = score;
           bestUrl = url;
         }
@@ -943,7 +930,6 @@ class VideoEvent {
       developer.log('✅ Selected best video URL (score: $bestScore): $bestUrl', name: 'VideoEvent');
     }
 
-    print('🔍 TEST DEBUG: Returning bestUrl=$bestUrl (bestScore=$bestScore)');
     return bestUrl;
   }
 
