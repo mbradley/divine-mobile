@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/mixins/video_prefetch_mixin.dart';
 import 'package:openvine/models/video_event.dart';
-import 'package:openvine/providers/route_feed_providers.dart';
+import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/widgets/video_feed_item.dart';
 import 'package:openvine/utils/unified_logger.dart';
@@ -40,7 +40,7 @@ class _ExploreVideoScreenPureState extends ConsumerState<ExploreVideoScreenPure>
   void initState() {
     super.initState();
 
-    // Find starting video index or use provided index
+    // Find starting video index in the tab-specific list passed from parent
     _initialIndex = widget.startingIndex ??
         widget.videoList.indexWhere((video) => video.id == widget.startingVideo.id);
 
@@ -62,23 +62,23 @@ class _ExploreVideoScreenPureState extends ConsumerState<ExploreVideoScreenPure>
 
   @override
   Widget build(BuildContext context) {
-    // Watch the router-driven video provider (same source as active video detection)
-    final videosAsync = ref.watch(videosForExploreRouteProvider);
+    // Use the tab-specific sorted list from parent (maintains sort order from grid)
+    // Apply broken video filter if available
+    final brokenTrackerAsync = ref.watch(brokenVideoTrackerProvider);
 
-    return videosAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => Center(
-        child: Text('Error loading videos: $error'),
-      ),
-      data: (feedState) {
-        final videos = feedState.videos;
+    final videos = brokenTrackerAsync.maybeWhen(
+      data: (tracker) => widget.videoList
+          .where((video) => !tracker.isVideoBroken(video.id))
+          .toList(),
+      orElse: () => widget.videoList, // No filtering if tracker not ready
+    );
 
-        if (videos.isEmpty) {
-          return const Center(child: Text('No videos available'));
-        }
+    if (videos.isEmpty) {
+      return const Center(child: Text('No videos available'));
+    }
 
-        // Use the provider's video list (same as active video detection)
-        return PageView.builder(
+    // Use tab-specific video list from parent (preserves grid sort order)
+    return PageView.builder(
           itemCount: videos.length,
           controller: PageController(initialPage: _initialIndex),
           scrollDirection: Axis.vertical,
@@ -111,7 +111,5 @@ class _ExploreVideoScreenPureState extends ConsumerState<ExploreVideoScreenPure>
             );
           },
         );
-      },
-    );
   }
 }

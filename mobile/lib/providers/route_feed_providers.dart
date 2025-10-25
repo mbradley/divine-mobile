@@ -2,6 +2,7 @@
 // ABOUTME: Enables router-driven screens to reactively get route-appropriate data
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/home_feed_provider.dart';
@@ -9,6 +10,11 @@ import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/router/page_context_provider.dart';
 import 'package:openvine/router/route_utils.dart';
 import 'package:openvine/state/video_feed_state.dart';
+
+/// Temporary provider to hold the explore tab's current video list
+/// This is set by ExploreScreen when entering feed mode and consumed by both
+/// ExploreVideoScreenPure and activeVideoIdProvider to ensure they use the same list
+final exploreTabVideosProvider = StateProvider<List<VideoEvent>?>((ref) => null);
 
 /// Home feed state (follows only)
 /// Returns AsyncValue<VideoFeedState> for route-aware home screen
@@ -32,7 +38,7 @@ final videosForHomeRouteProvider =
 
 /// Explore feed state (discovery/all videos)
 /// Returns AsyncValue<VideoFeedState> for route-aware explore screen
-/// Sorted by loop count (descending) to match ExploreScreen tabs
+/// Uses tab-specific list when in feed mode, otherwise sorted by loop count
 /// Filters out broken videos to match grid UI behavior
 final videosForExploreRouteProvider =
     Provider<AsyncValue<VideoFeedState>>((ref) {
@@ -44,7 +50,21 @@ final videosForExploreRouteProvider =
         // Not on explore route - return loading
         return const AsyncValue.loading();
       }
-      // On explore route - watch video events and broken video tracker
+
+      // Check if we have a tab-specific list (set when user enters feed mode)
+      final tabVideos = ref.watch(exploreTabVideosProvider);
+      if (tabVideos != null && tabVideos.isNotEmpty) {
+        // Use the tab's sorted list (preserves New Vines/Trending/Editor's Pick sort order)
+        return AsyncValue.data(
+          VideoFeedState(
+            videos: tabVideos,
+            hasMoreContent: true,
+            lastUpdated: DateTime.now(),
+          ),
+        );
+      }
+
+      // No tab list - use default behavior (loop-count sorted)
       final eventsAsync = ref.watch(videoEventsProvider);
       final brokenTrackerAsync = ref.watch(brokenVideoTrackerProvider);
 
@@ -58,7 +78,7 @@ final videosForExploreRouteProvider =
             orElse: () => videos, // No filtering if tracker not ready
           );
 
-          // Sort by loop count (descending) to match ExploreScreen tabs
+          // Sort by loop count (descending) as default
           final sortedVideos = List<VideoEvent>.from(filteredVideos);
           sortedVideos.sort((a, b) {
             final aLoops = a.originalLoops ?? 0;

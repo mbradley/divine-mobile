@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - Explore Feed Sort Order Mismatch (2025-10-25)
+
+#### Bug Fixes
+- **Fixed video playback issues caused by sort order mismatch between grid and feed**
+  - Root cause: ExploreScreen grid used tab-specific sorting (New Vines=date, Trending=loops) but activeVideoIdProvider used default loop-count sorting
+  - Symptom 1: Videos wouldn't play when tapped in grid
+  - Symptom 2: Wrong video would play (tapping New Vines video played Trending video)
+  - Symptom 3: Feed displayed different order than grid (confusing UX)
+  - Solution: Created shared state provider to synchronize video lists across all components
+
+#### Files Modified
+- `lib/providers/route_feed_providers.dart` - Added exploreTabVideosProvider and legacy Riverpod import
+- `lib/providers/active_video_provider.dart` - Added debug logging for troubleshooting
+- `lib/screens/explore_screen.dart` - Set/clear tab videos provider on enter/exit feed mode
+- `lib/screens/pure/explore_video_screen_pure.dart` - Use tab-specific list from parent
+
+#### Technical Details
+- Created `exploreTabVideosProvider` (StateProvider) to hold tab-specific sorted video lists
+- ExploreScreen sets this provider when entering feed mode with the grid's sorted list
+- videosForExploreRouteProvider uses tab list when available, falls back to loop-count sorting
+- activeVideoIdProvider uses videosForExploreRouteProvider, now containing correct tab list
+- All three components (grid, feed UI, active video logic) now use same sorted list
+- Requires `import 'package:flutter_riverpod/legacy.dart'` for StateProvider in Riverpod 3.0
+- Ensures New Vines maintains date sort, Trending maintains loop sort, Editor's Pick maintains curation
+
 ### Fixed - NIP-71 imeta Tag Parsing (2025-10-25)
 
 #### Bug Fixes

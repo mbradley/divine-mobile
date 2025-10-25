@@ -8,6 +8,7 @@ import 'package:openvine/models/video_event.dart';
 import 'package:openvine/providers/video_events_providers.dart';
 import 'package:openvine/providers/tab_visibility_provider.dart';
 import 'package:openvine/providers/curation_providers.dart';
+import 'package:openvine/providers/route_feed_providers.dart';
 import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/screens/pure/explore_video_screen_pure.dart';
 import 'package:openvine/screens/hashtag_feed_screen.dart';
@@ -163,10 +164,13 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
       _feedStartIndex = startIndex;
     });
 
+    // Set the tab's video list in the provider so both ExploreVideoScreenPure and activeVideoIdProvider use it
+    ref.read(exploreTabVideosProvider.notifier).state = videos;
+
     // Navigate to update URL - this triggers reactive video playback via router
     context.goExplore(startIndex);
 
-    Log.info('🎯 ExploreScreenPure: Entered feed mode at index $startIndex via URL navigation',
+    Log.info('🎯 ExploreScreenPure: Entered feed mode at index $startIndex with ${videos.length} videos',
         category: LogCategory.video);
   }
 
@@ -177,6 +181,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
       _isInFeedMode = false;
       _feedVideos = null;
     });
+
+    // Clear the tab video list provider
+    ref.read(exploreTabVideosProvider.notifier).state = null;
 
     // Navigate back to grid mode (no videoIndex) - stops video playback
     context.go('/explore');
