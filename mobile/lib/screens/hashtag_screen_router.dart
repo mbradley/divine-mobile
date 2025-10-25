@@ -29,17 +29,21 @@ class HashtagScreenRouter extends ConsumerWidget {
 
     final hashtag = routeCtx.hashtag ?? 'trending';
     final videoIndex = routeCtx.videoIndex;
+    final eventId = routeCtx.eventId;
 
-    // Grid mode: no video index
-    if (videoIndex == null) {
+    // Grid mode: no video index or event ID
+    if (videoIndex == null && eventId == null) {
       Log.info('HashtagScreenRouter: Showing grid for #$hashtag',
           name: 'HashtagRouter', category: LogCategory.ui);
       return HashtagFeedScreen(hashtag: hashtag, embedded: true);
     }
 
-    // Feed mode: show video at specific index
-    Log.info('HashtagScreenRouter: Showing feed for #$hashtag at index $videoIndex',
-        name: 'HashtagRouter', category: LogCategory.ui);
+    // Feed mode: show video at specific index or event
+    Log.info(
+      'HashtagScreenRouter: Showing feed for #$hashtag (eventId=$eventId, index=$videoIndex)',
+      name: 'HashtagRouter',
+      category: LogCategory.ui,
+    );
 
     // Watch the hashtag feed provider to get videos
     final feedStateAsync = ref.watch(hashtagFeedProvider);
@@ -68,8 +72,16 @@ class HashtagScreenRouter extends ConsumerWidget {
           );
         }
 
-        // Clamp index to valid range
-        final safeIndex = videoIndex.clamp(0, videos.length - 1);
+        // Determine target index from route context
+        int safeIndex = 0;
+        if (eventId != null) {
+          // Event-based routing: find video by ID
+          final targetIndex = videos.indexWhere((v) => v.id == eventId);
+          safeIndex = targetIndex != -1 ? targetIndex : 0;
+        } else if (videoIndex != null) {
+          // Legacy index-based routing
+          safeIndex = videoIndex.clamp(0, videos.length - 1);
+        }
 
         // Feed mode - show fullscreen video player
         // AppShell already provides AppBar with back button, so no need for Scaffold here

@@ -32,8 +32,11 @@ final pageContextProvider = StreamProvider<RouteContext>((ref) async* {
   // (In tests we often use Stream.value('/profile/npub...'))
   await for (final loc in locations) {
     final ctx = parseRoute(loc);
-    Log.info('CTX derive: type=${ctx.type} npub=${ctx.npub} index=${ctx.videoIndex}',
-        name: 'Route', category: LogCategory.system);
+    Log.info(
+      'CTX derive: type=${ctx.type} npub=${ctx.npub} index=${ctx.videoIndex} eventId=${ctx.eventId}',
+      name: 'Route',
+      category: LogCategory.system,
+    );
     yield ctx;
   }
 });

@@ -71,7 +71,9 @@ void main() {
       when(() => mockNostrService.isInitialized).thenReturn(true);
       when(() => mockNostrService.connectedRelayCount).thenReturn(1);
       when(() => mockNostrService.subscribeToEvents(
-              filters: any(named: 'filters')))
+              filters: any(named: 'filters'),
+              onEose: any(named: 'onEose'),
+              bypassLimits: any(named: 'bypassLimits')))
           .thenAnswer((_) => eventStreamController.stream);
 
       testSubscriptionManager = TestSubscriptionManager(eventStreamController);
@@ -88,6 +90,18 @@ void main() {
 
     test('should allow different subscriptions with different parameters',
         () async {
+      // Track NostrService.subscribeToEvents calls since VideoEventService bypasses SubscriptionManager
+      final subscriptionCalls = <List<Filter>>[];
+      when(() => mockNostrService.subscribeToEvents(
+          filters: any(named: 'filters'),
+          onEose: any(named: 'onEose'),
+          bypassLimits: any(named: 'bypassLimits'))).thenAnswer((invocation) {
+        final filters =
+            invocation.namedArguments[const Symbol('filters')] as List<Filter>;
+        subscriptionCalls.add(filters);
+        return eventStreamController.stream;
+      });
+
       // First subscription: Classic vines from specific author
       await videoEventService.subscribeToVideoFeed(
         subscriptionType: SubscriptionType.discovery,
@@ -99,8 +113,8 @@ void main() {
       );
 
       // Should have created one subscription
-      expect(testSubscriptionManager.subscriptionCalls.length, equals(1));
-      expect(videoEventService.isSubscribed, isTrue);
+      expect(subscriptionCalls.length, equals(1));
+      expect(videoEventService.isSubscribed(SubscriptionType.discovery), isTrue);
 
       // Second subscription: Open feed (all videos, no author filter)
       await videoEventService.subscribeToVideoFeed(
@@ -111,27 +125,24 @@ void main() {
 
       // Should have created a second subscription with different parameters
       expect(
-        testSubscriptionManager.subscriptionCalls.length,
+        subscriptionCalls.length,
         equals(2),
         reason:
             'Should allow subscription with different parameters (no authors vs specific authors)',
       );
 
       // Verify the subscriptions have different filters
-      final firstFilters = testSubscriptionManager.subscriptionCalls[0]
-          ['filters'] as List<Filter>;
-      final secondFilters = testSubscriptionManager.subscriptionCalls[1]
-          ['filters'] as List<Filter>;
-
-      expect(firstFilters[0].authors, isNotNull);
-      expect(firstFilters[0].authors!.length, equals(1));
-      expect(secondFilters[0].authors, isNull);
+      expect(subscriptionCalls[0][0].authors, isNotNull);
+      expect(subscriptionCalls[0][0].authors!.length, equals(1));
+      expect(subscriptionCalls[1][0].authors, isNull);
     });
 
     test('should reject truly duplicate subscriptions', () async {
       final subscriptionCalls = <List<Filter>>[];
       when(() => mockNostrService.subscribeToEvents(
-          filters: any(named: 'filters'))).thenAnswer((invocation) {
+          filters: any(named: 'filters'),
+          onEose: any(named: 'onEose'),
+          bypassLimits: any(named: 'bypassLimits'))).thenAnswer((invocation) {
         final filters =
             invocation.namedArguments[const Symbol('filters')] as List<Filter>;
         subscriptionCalls.add(filters);
@@ -165,7 +176,9 @@ void main() {
     test('should allow multiple author-specific subscriptions', () async {
       final subscriptionCalls = <List<Filter>>[];
       when(() => mockNostrService.subscribeToEvents(
-          filters: any(named: 'filters'))).thenAnswer((invocation) {
+          filters: any(named: 'filters'),
+          onEose: any(named: 'onEose'),
+          bypassLimits: any(named: 'bypassLimits'))).thenAnswer((invocation) {
         final filters =
             invocation.namedArguments[const Symbol('filters')] as List<Filter>;
         subscriptionCalls.add(filters);
@@ -205,7 +218,9 @@ void main() {
     test('should correctly handle replace parameter', () async {
       final subscriptionCalls = <List<Filter>>[];
       when(() => mockNostrService.subscribeToEvents(
-          filters: any(named: 'filters'))).thenAnswer((invocation) {
+          filters: any(named: 'filters'),
+          onEose: any(named: 'onEose'),
+          bypassLimits: any(named: 'bypassLimits'))).thenAnswer((invocation) {
         final filters =
             invocation.namedArguments[const Symbol('filters')] as List<Filter>;
         subscriptionCalls.add(filters);
@@ -254,7 +269,9 @@ void main() {
       // This test exposes the current bug where subscription parameters aren't tracked
       final subscriptionCalls = <List<Filter>>[];
       when(() => mockNostrService.subscribeToEvents(
-          filters: any(named: 'filters'))).thenAnswer((invocation) {
+          filters: any(named: 'filters'),
+          onEose: any(named: 'onEose'),
+          bypassLimits: any(named: 'bypassLimits'))).thenAnswer((invocation) {
         final filters =
             invocation.namedArguments[const Symbol('filters')] as List<Filter>;
         subscriptionCalls.add(filters);
@@ -292,7 +309,9 @@ void main() {
       // This is the exact sequence that's failing in production
       final subscriptionCalls = <List<Filter>>[];
       when(() => mockNostrService.subscribeToEvents(
-          filters: any(named: 'filters'))).thenAnswer((invocation) {
+          filters: any(named: 'filters'),
+          onEose: any(named: 'onEose'),
+          bypassLimits: any(named: 'bypassLimits'))).thenAnswer((invocation) {
         final filters =
             invocation.namedArguments[const Symbol('filters')] as List<Filter>;
         subscriptionCalls.add(filters);

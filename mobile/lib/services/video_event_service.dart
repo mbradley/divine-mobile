@@ -703,6 +703,17 @@ class VideoEventService extends ChangeNotifier {
           }
         }
 
+        // Store current subscription parameters for duplicate detection BEFORE any early returns
+        _subscriptionParams[subscriptionType] = {
+          'authors': authors,
+          'hashtags': hashtags,
+          'group': group,
+          'since': since,
+          'until': until,
+          'limit': limit,
+          'includeReposts': includeReposts,
+        };
+
         // Generate deterministic subscription ID based on subscription parameters
         final subscriptionId = _generateSubscriptionId(
           subscriptionType: subscriptionType,
@@ -834,17 +845,6 @@ class VideoEventService extends ChangeNotifier {
             name: 'VideoEventService', category: LogCategory.video);
         rethrow;
       }
-
-      // Store current subscription parameters for duplicate detection
-      _subscriptionParams[subscriptionType] = {
-        'authors': authors,
-        'hashtags': hashtags,
-        'group': group,
-        'since': since,
-        'until': until,
-        'limit': limit,
-        'includeReposts': includeReposts,
-      };
 
       Log.info('Video event subscription established successfully!',
           name: 'VideoEventService', category: LogCategory.video);
