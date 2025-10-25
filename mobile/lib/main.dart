@@ -28,7 +28,6 @@ import 'package:openvine/features/feature_flags/providers/feature_flag_providers
 import 'dart:io' if (dart.library.html) 'package:openvine/utils/platform_io_web.dart' as io;
 import 'package:openvine/network/vine_cdn_http_overrides.dart' if (dart.library.html) 'package:openvine/utils/platform_io_web.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
-import 'package:video_player_web_hls/video_player_web_hls.dart' if (dart.library.html) 'package:video_player_web_hls/video_player_web_hls.dart';
 
 Future<void> _startOpenVineApp() async {
   // Add timing logs for startup diagnostics
@@ -44,13 +43,10 @@ Future<void> _startOpenVineApp() async {
   // NOTE: Native video players (AVPlayer on iOS/macOS, ExoPlayer on Android)
   // do not require explicit initialization like media_kit did.
   // They initialize automatically when VideoPlayerController is first created.
-
-  // Initialize HLS.js for web platform to support .m3u8 video streams
-  if (kIsWeb) {
-    VideoPlayerWebHls.register();
-    Log.info('[STARTUP] Registered HLS.js for web video playback',
-        name: 'Main', category: LogCategory.system);
-  }
+  //
+  // NOTE: video_player_web_hls auto-registers for HLS support on web.
+  // Just needs <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  // in web/index.html (already added).
 
   StartupPerformanceService.instance.completePhase('bindings');
 
