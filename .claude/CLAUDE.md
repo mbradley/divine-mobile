@@ -372,6 +372,8 @@ See `mobile/docs/NOSTR_EVENT_TYPES.md` for complete event type documentation.
 - **Hot Reload**: Available on all platforms for rapid development
 - **Debug Tools**: Native debuggers and Flutter DevTools
 
+**For detailed setup and build instructions**, see `CONTRIBUTING.md`
+
 ## Build/Test Commands
 
 

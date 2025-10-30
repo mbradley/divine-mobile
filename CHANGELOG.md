@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased Changes]
 
 ### Added
+- **Contributing Guide**: Comprehensive `CONTRIBUTING.md` with setup and build instructions
+  - Complete prerequisites for Flutter, iOS, Android, and backend development
+  - Detailed Flutter Embedded Nostr Relay setup with symlink instructions
+  - Platform-specific build instructions (macOS, iOS, Android, Windows)
+  - Development workflow including hot reload, testing, and code analysis
+  - Code standards and TDD requirements
+  - Pull request process and commit message format
+  - Common issues troubleshooting guide
+  - Updated README.md with link to contributing guide
+
 - **Multi-Account Support Planning**: Comprehensive implementation plan for multiple user accounts
   - Detailed 40+ page implementation guide at `docs/MULTI_ACCOUNT_IMPLEMENTATION.md`
   - Secure AccountManager architecture with biometric authentication design

@@ -263,12 +263,19 @@ Reports include structured diagnostic data that helps with debugging and improvi
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Write tests for new functionality
-4. Implement the feature
-5. Ensure all tests pass
-6. Submit a pull request
+We welcome contributions! Please see our **[Contributing Guide](CONTRIBUTING.md)** for detailed instructions on:
+
+- Setting up the development environment
+- Building Divine (OpenVine) from source
+- Setting up the Flutter Embedded Nostr Relay dependency
+- Running tests and code quality checks
+- Submitting pull requests
+
+**Quick Start for Contributors:**
+1. Read [CONTRIBUTING.md](CONTRIBUTING.md)
+2. Set up the Flutter Embedded Nostr Relay symlink
+3. Run `flutter pub get` in the `mobile/` directory
+4. Start building with `flutter run -d macos`
 
 ## License
 
