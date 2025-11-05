@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased Changes]
 
 ### Fixed
+- **Explore Screen Navigation**: Fixed critical bug where tapping videos in Explore tab would fail on first attempt
+  - Made URL the single source of truth using `pageContextProvider` instead of internal widget state
+  - ExploreScreen now derives feed/grid mode from URL `videoIndex` parameter reactively
+  - Fixed `RangeError` when widget recreated due to GoRouter's different Navigator keys for grid/feed modes
+  - Videos and starting index now read from `exploreTabVideosProvider`, surviving widget recreation
+  - Removed unnecessary `setState()` call in hashtag loading that interfered with navigation
+  - Follows proper Flutter Navigation 2.0 + Riverpod pattern where URL drives UI state
+
 - **Profile Navigation**: Fixed issue where tapping Profile from drawer/bottom nav would skip grid view and go directly to fullscreen video feed
   - Added missing `/profile/:npub` route for grid mode (was only `/profile/:npub/:index`)
   - Fixed route parser to return `null` videoIndex for grid mode instead of defaulting to `0`

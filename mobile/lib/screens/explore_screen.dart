@@ -10,6 +10,8 @@ import 'package:openvine/providers/tab_visibility_provider.dart';
 import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/route_feed_providers.dart';
 import 'package:openvine/router/nav_extensions.dart';
+import 'package:openvine/router/page_context_provider.dart';
+import 'package:openvine/router/route_utils.dart';
 import 'package:openvine/screens/pure/explore_video_screen_pure.dart';
 import 'package:openvine/screens/hashtag_feed_screen.dart';
 import 'package:openvine/services/top_hashtags_service.dart';
@@ -31,9 +33,7 @@ class ExploreScreen extends ConsumerStatefulWidget {
 class _ExploreScreenState extends ConsumerState<ExploreScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  bool _isInFeedMode = false;
-  List<VideoEvent>? _feedVideos;
-  int _feedStartIndex = 0;
+  // Feed mode and videos are now derived from URL + providers - no internal state needed
   String? _hashtagMode;  // When non-null, showing hashtag feed
   String? _customTitle;  // Custom title to override default "Explore"
 
@@ -83,12 +83,10 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
     final count = TopHashtagsService.instance.topHashtags.length;
     Log.info('🏷️ ExploreScreen: Hashtags loaded: $count total, isLoaded=${TopHashtagsService.instance.isLoaded}',
         category: LogCategory.video);
+
+    // Trigger UI update to show loaded hashtags immediately
     if (mounted) {
-      setState(() {
-        // Trigger rebuild after hashtags are loaded
-        Log.info('🏷️ ExploreScreen: Triggering rebuild with $count hashtags',
-            category: LogCategory.video);
-      });
+      setState(() {});
     }
   }
 
@@ -132,16 +130,18 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
   void _resetToDefaultState() {
     if (!mounted) return;
 
-    // Exit feed or hashtag mode and return to default tab view
-    if (_isInFeedMode || _hashtagMode != null) {
-      setState(() {
-        _isInFeedMode = false;
-        _feedVideos = null;
-        _hashtagMode = null;
-      });
+    // Check current page context to see if we need to reset
+    final pageContext = ref.read(pageContextProvider);
+    final shouldReset = pageContext.whenOrNull(
+      data: (ctx) => ctx.videoIndex != null || _hashtagMode != null,
+    ) ?? false;
+
+    if (shouldReset) {
+      // Clear hashtag mode
+      _hashtagMode = null;
       setCustomTitle(null);  // Clear custom title
 
-      // Navigate back to grid mode (no videoIndex) - stops video playback
+      // Navigate back to grid mode (no videoIndex) - URL will drive UI state
       context.go('/explore');
 
       Log.info('🎯 ExploreScreenPure: Reset to default state',
@@ -158,16 +158,10 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
   void _enterFeedMode(List<VideoEvent> videos, int startIndex) {
     if (!mounted) return;
 
-    setState(() {
-      _isInFeedMode = true;
-      _feedVideos = videos;
-      _feedStartIndex = startIndex;
-    });
-
-    // Set the tab's video list in the provider so both ExploreVideoScreenPure and activeVideoIdProvider use it
+    // Store video list in provider so it survives widget recreation
     ref.read(exploreTabVideosProvider.notifier).state = videos;
 
-    // Navigate to update URL - this triggers reactive video playback via router
+    // Navigate to update URL - URL will drive the UI state (no internal state needed!)
     // videoIndex maps directly to list index (0=first video, 1=second video)
     context.goExplore(startIndex);
 
@@ -178,15 +172,10 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
   void _exitFeedMode() {
     if (!mounted) return;
 
-    setState(() {
-      _isInFeedMode = false;
-      _feedVideos = null;
-    });
-
     // Clear the tab video list provider
     ref.read(exploreTabVideosProvider.notifier).state = null;
 
-    // Navigate back to grid mode (no videoIndex) - stops video playback
+    // Navigate back to grid mode (no videoIndex) - URL will drive UI state
     context.go('/explore');
 
     Log.info('🎯 ExploreScreenPure: Exited feed mode via URL navigation',
@@ -249,33 +238,60 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
   }
 
   Widget _buildContent() {
-    if (_isInFeedMode) {
-      return _buildFeedModeContent();
-    }
+    // Derive mode from URL (single source of truth) instead of internal state
+    final pageContext = ref.watch(pageContextProvider);
 
-    if (_hashtagMode != null) {
-      return _buildHashtagModeContent(_hashtagMode!);
-    }
+    return pageContext.when(
+      data: (ctx) {
+        // Check if we're in feed mode by looking at URL's videoIndex parameter
+        final bool isInFeedMode = ctx.type == RouteType.explore && ctx.videoIndex != null;
 
-    // Default: show tab view
-    return TabBarView(
-      controller: _tabController,
-      children: [
-        _buildPopularNowTab(),
-        _buildTrendingTab(),
-        _buildEditorsPickTab(),
-      ],
+        if (isInFeedMode) {
+          return _buildFeedModeContent();
+        }
+
+        if (_hashtagMode != null) {
+          return _buildHashtagModeContent(_hashtagMode!);
+        }
+
+        // Default: show tab view
+        return TabBarView(
+          controller: _tabController,
+          children: [
+            _buildPopularNowTab(),
+            _buildTrendingTab(),
+            _buildEditorsPickTab(),
+          ],
+        );
+      },
+      loading: () => Center(child: CircularProgressIndicator(color: VineTheme.vineGreen)),
+      error: (e, s) => Center(child: Text('Error: $e', style: TextStyle(color: VineTheme.likeRed))),
     );
   }
 
   Widget _buildFeedModeContent() {
-    final videos = _feedVideos ?? const <VideoEvent>[];
+    // Read videos from provider (survives widget recreation)
+    final videos = ref.watch(exploreTabVideosProvider) ?? const <VideoEvent>[];
+
+    // Derive starting index from URL
+    final pageContext = ref.watch(pageContextProvider);
+    final startIndex = pageContext.whenOrNull(
+      data: (ctx) => ctx.videoIndex ?? 0,
+    ) ?? 0;
+
+    // Safety check: ensure we have videos and valid index
+    if (videos.isEmpty || startIndex >= videos.length) {
+      return Center(
+        child: Text('No videos available', style: TextStyle(color: VineTheme.whiteText)),
+      );
+    }
+
     // Just return the video screen - tabs are shown above
     return ExploreVideoScreenPure(
-      startingVideo: videos[_feedStartIndex],
+      startingVideo: videos[startIndex],
       videoList: videos,
       contextTitle: '', // Don't show context title for general explore feed
-      startingIndex: _feedStartIndex,
+      startingIndex: startIndex,
     );
   }
 
@@ -687,7 +703,13 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
     Log.debug('🎯 ExploreScreen became hidden', category: LogCategory.video);
   }
 
-  bool get isInFeedMode => _isInFeedMode;
+  bool get isInFeedMode {
+    // Derive from URL instead of internal state
+    final pageContext = ref.read(pageContextProvider);
+    return pageContext.whenOrNull(
+      data: (ctx) => ctx.type == RouteType.explore && ctx.videoIndex != null,
+    ) ?? false;
+  }
   String? get currentHashtag => _hashtagMode;
   String? get customTitle => _customTitle;
 
