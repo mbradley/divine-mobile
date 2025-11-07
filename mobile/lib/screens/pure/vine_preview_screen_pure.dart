@@ -1,7 +1,6 @@
 // ABOUTME: Pure vine preview screen using revolutionary Riverpod architecture
 // ABOUTME: Reviews recorded videos before publishing without VideoManager dependencies
 
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/models/vine_draft.dart';
@@ -14,14 +13,10 @@ import 'package:video_player/video_player.dart';
 class VinePreviewScreenPure extends ConsumerStatefulWidget {
   const VinePreviewScreenPure({
     super.key,
-    required this.videoFile,
-    required this.frameCount,
-    required this.selectedApproach,
+    required this.draftId,
   });
 
-  final File videoFile;
-  final int frameCount;
-  final String selectedApproach;
+  final String draftId;
 
   @override
   ConsumerState<VinePreviewScreenPure> createState() => _VinePreviewScreenPureState();
@@ -34,37 +29,74 @@ class _VinePreviewScreenPureState extends ConsumerState<VinePreviewScreenPure> {
   bool _isUploading = false;
   VideoPlayerController? _videoController;
   bool _isVideoInitialized = false;
+  VineDraft? _currentDraft;
   // bool _isExpiringPost = false; // Unused - commenting out
   // int _expirationHours = 24; // Unused - commenting out
 
   @override
   void initState() {
     super.initState();
-    // Set default title
-    _titleController.text = 'Do it for the Vine!';
+    _loadDraft();
+  }
 
-    // Pre-populate with default hashtags
-    _hashtagsController.text = 'openvine vine';
+  Future<void> _loadDraft() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final draftService = DraftStorageService(prefs);
+      final drafts = await draftService.getAllDrafts();
 
-    Log.info('🎬 VinePreviewScreenPure: Initialized for file: ${widget.videoFile.path}',
-        category: LogCategory.video);
+      final draft = drafts.firstWhere(
+        (d) => d.id == widget.draftId,
+        orElse: () {
+          Log.error('🎬 Draft not found: ${widget.draftId}', category: LogCategory.video);
+          if (mounted) {
+            Navigator.of(context).pop();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Draft not found'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          throw StateError('Draft ${widget.draftId} not found');
+        },
+      );
 
-    // Initialize video preview
-    _initializeVideoPreview();
+      if (mounted) {
+        setState(() {
+          _currentDraft = draft;
+        });
+
+        // Populate form with draft data
+        _titleController.text = draft.title;
+        _descriptionController.text = draft.description;
+        _hashtagsController.text = draft.hashtags.join(' ');
+
+        Log.info('🎬 VinePreviewScreenPure: Loaded draft ${draft.id}',
+            category: LogCategory.video);
+
+        // Initialize video preview
+        _initializeVideoPreview();
+      }
+    } catch (e) {
+      Log.error('🎬 Failed to load draft: $e', category: LogCategory.video);
+    }
   }
 
   Future<void> _initializeVideoPreview() async {
+    if (_currentDraft == null) return;
+
     try {
       // Verify file exists before attempting to play
-      if (!await widget.videoFile.exists()) {
-        throw Exception('Video file does not exist: ${widget.videoFile.path}');
+      if (!await _currentDraft!.videoFile.exists()) {
+        throw Exception('Video file does not exist: ${_currentDraft!.videoFile.path}');
       }
 
-      final fileSize = await widget.videoFile.length();
-      Log.info('🎬 Initializing video preview for file: ${widget.videoFile.path} (${fileSize} bytes)',
+      final fileSize = await _currentDraft!.videoFile.length();
+      Log.info('🎬 Initializing video preview for file: ${_currentDraft!.videoFile.path} (${fileSize} bytes)',
           category: LogCategory.video);
 
-      _videoController = VideoPlayerController.file(widget.videoFile);
+      _videoController = VideoPlayerController.file(_currentDraft!.videoFile);
 
       await _videoController!.initialize().timeout(
         const Duration(seconds: 2),
@@ -304,10 +336,9 @@ class _VinePreviewScreenPureState extends ConsumerState<VinePreviewScreenPure> {
   }
 
   Future<void> _saveDraft() async {
-    try {
-      Log.info('🎬 VinePreviewScreenPure: Saving draft for: ${widget.videoFile.path}',
-          category: LogCategory.video);
+    if (_currentDraft == null) return;
 
+    try {
       final prefs = await SharedPreferences.getInstance();
       final draftService = DraftStorageService(prefs);
 
@@ -317,16 +348,21 @@ class _VinePreviewScreenPureState extends ConsumerState<VinePreviewScreenPure> {
           ? <String>[]
           : hashtagText.split(' ').where((tag) => tag.isNotEmpty).toList();
 
-      final draft = VineDraft.create(
-        videoFile: widget.videoFile,
+      // Update existing draft instead of creating new one
+      final updated = _currentDraft!.copyWith(
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
         hashtags: hashtags,
-        frameCount: widget.frameCount,
-        selectedApproach: widget.selectedApproach,
       );
 
-      await draftService.saveDraft(draft);
+      await draftService.saveDraft(updated);
+
+      setState(() {
+        _currentDraft = updated;
+      });
+
+      Log.info('🎬 VinePreviewScreenPure: Updated draft ${updated.id}',
+          category: LogCategory.video);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -335,8 +371,6 @@ class _VinePreviewScreenPureState extends ConsumerState<VinePreviewScreenPure> {
             duration: Duration(seconds: 2),
           ),
         );
-
-        Navigator.of(context).pop();
       }
     } catch (e) {
       Log.error('🎬 VinePreviewScreenPure: Failed to save draft: $e',
@@ -354,12 +388,14 @@ class _VinePreviewScreenPureState extends ConsumerState<VinePreviewScreenPure> {
   }
 
   Future<void> _publishVideo() async {
+    if (_currentDraft == null) return;
+
     setState(() {
       _isUploading = true;
     });
 
     try {
-      Log.info('🎬 VinePreviewScreenPure: Publishing video: ${widget.videoFile.path}',
+      Log.info('🎬 VinePreviewScreenPure: Publishing video: ${_currentDraft!.videoFile.path}',
           category: LogCategory.video);
 
       // TODO: Implement video publishing with upload service

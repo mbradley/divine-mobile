@@ -279,9 +279,7 @@ class _VineDraftsScreenState extends ConsumerState<VineDraftsScreen> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => VinePreviewScreenPure(
-          videoFile: draft.videoFile,
-          frameCount: draft.frameCount,
-          selectedApproach: draft.selectedApproach,
+          draftId: draft.id,
         ),
       ),
     );
