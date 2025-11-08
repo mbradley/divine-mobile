@@ -528,20 +528,12 @@ class VideoOverlayActions extends ConsumerWidget {
           left: 16,
           child: Consumer(
             builder: (context, ref, _) {
-              // Watch the reactive user profile state
-              // This will rebuild when profiles are added to the cache
-              final profileState = ref.watch(userProfileProvider);
-              final profile = profileState.getCachedProfile(video.pubkey);
-              final display = profile?.bestDisplayName ?? profile?.displayName ?? profile?.name ?? 'Loading...';
-
-              // Trigger async profile fetch if not cached (doesn't block UI)
-              if (profile == null && !profileState.shouldSkipFetch(video.pubkey)) {
-                Future.microtask(() {
-                  if (ref.exists(userProfileProvider)) {
-                    ref.read(userProfileProvider.notifier).fetchProfile(video.pubkey);
-                  }
-                });
-              }
+              // Watch profile provider - now checks both module cache AND service cache
+              final profileAsync = ref.watch(fetchUserProfileProvider(video.pubkey));
+              final display = profileAsync.maybeWhen(
+                data: (p) => p?.bestDisplayName ?? p?.displayName ?? p?.name,
+                orElse: () => null,
+              ) ?? 'Loading...';
 
               final authService = ref.watch(authServiceProvider);
               final currentUserPubkey = authService.currentPublicKeyHex;

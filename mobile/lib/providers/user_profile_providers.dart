@@ -91,10 +91,24 @@ bool _shouldSkipFetch(String pubkey) {
 /// Async provider for loading a single user profile
 @riverpod
 Future<UserProfile?> fetchUserProfile(Ref ref, String pubkey) async {
-  // Check cache first
+  // Check module-level cache first
   final cached = _getCachedUserProfile(pubkey);
   if (cached != null) {
     return cached;
+  }
+
+  // Check UserProfileService cache (profiles fetched by VideoEventService end up here)
+  final userProfileService = ref.watch(userProfileServiceProvider);
+  final serviceCached = userProfileService.getCachedProfile(pubkey);
+  if (serviceCached != null) {
+    // Sync to module-level cache for faster future access
+    _cacheUserProfile(pubkey, serviceCached);
+    Log.debug(
+      '✅ Found profile in service cache: ${serviceCached.bestDisplayName}',
+      name: 'UserProfileProvider',
+      category: LogCategory.ui,
+    );
+    return serviceCached;
   }
 
   // Check if should skip (known missing)
@@ -106,9 +120,6 @@ Future<UserProfile?> fetchUserProfile(Ref ref, String pubkey) async {
     );
     return null;
   }
-
-  // Get UserProfileService from app providers
-  final userProfileService = ref.watch(userProfileServiceProvider);
 
   Log.debug('🔍 Loading profile for: ${_safePubkeyTrunc(pubkey)}...',
       name: 'UserProfileProvider', category: LogCategory.ui);
