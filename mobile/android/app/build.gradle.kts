@@ -70,4 +70,7 @@ configurations.all {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+
+    // ProofMode library for cryptographic proof generation
+    implementation("org.witness:android-libproofmode:1.0.18")
 }

@@ -11,6 +11,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/vine_recording_provider.dart';
 import 'package:openvine/models/pending_upload.dart' show UploadStatus, PendingUpload;
 import 'package:openvine/models/vine_draft.dart';
+import 'package:openvine/models/aspect_ratio.dart' as vine;
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/theme/vine_theme.dart';
@@ -373,7 +374,9 @@ class _VideoMetadataScreenPureState extends ConsumerState<VideoMetadataScreenPur
                                     alignment: Alignment.center,
                                     children: [
                                       AspectRatio(
-                                        aspectRatio: _videoController!.value.aspectRatio,
+                                        aspectRatio: _currentDraft!.aspectRatio == vine.AspectRatio.square
+                                            ? 1.0
+                                            : 9.0 / 16.0,
                                         child: VideoPlayer(_videoController!),
                                       ),
                                       // Play/pause overlay

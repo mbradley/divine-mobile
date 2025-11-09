@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'package:hive_ce/hive.dart';
 import 'package:openvine/services/proofmode_session_service.dart';
+import 'package:openvine/models/native_proof_data.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 part 'pending_upload.g.dart';
@@ -163,11 +164,36 @@ class PendingUpload {
   /// Check if this upload has ProofMode data
   bool get hasProofMode => proofManifestJson != null;
 
+  /// Get deserialized NativeProofData (null if not present or invalid JSON)
+  /// This is the new ProofMode format using native libraries
+  NativeProofData? get nativeProof {
+    if (proofManifestJson == null) return null;
+    try {
+      final json = jsonDecode(proofManifestJson!);
+      // Check if this is native proof data (has 'videoHash' field)
+      if (json is Map<String, dynamic> && json.containsKey('videoHash')) {
+        return NativeProofData.fromJson(json);
+      }
+      return null;
+    } catch (e) {
+      Log.error('Failed to parse NativeProofData: $e',
+          name: 'PendingUpload', category: LogCategory.system);
+      return null;
+    }
+  }
+
   /// Get deserialized ProofManifest (null if not present or invalid JSON)
+  /// DEPRECATED: Use nativeProof instead - this is for backward compatibility only
+  @Deprecated('Use nativeProof instead - native library-based ProofMode')
   ProofManifest? get proofManifest {
     if (proofManifestJson == null) return null;
     try {
-      return ProofManifest.fromJson(jsonDecode(proofManifestJson!));
+      final json = jsonDecode(proofManifestJson!);
+      // Check if this is old session-based proof (has 'sessionId' field)
+      if (json is Map<String, dynamic> && json.containsKey('sessionId')) {
+        return ProofManifest.fromJson(json);
+      }
+      return null;
     } catch (e) {
       Log.error('Failed to parse ProofManifest: $e',
           name: 'PendingUpload', category: LogCategory.system);

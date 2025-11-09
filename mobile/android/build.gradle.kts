@@ -2,6 +2,10 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        // Guardian Project Maven repo for ProofMode library
+        maven {
+            url = uri("https://raw.githubusercontent.com/guardianproject/gpmaven/master")
+        }
     }
 }
 

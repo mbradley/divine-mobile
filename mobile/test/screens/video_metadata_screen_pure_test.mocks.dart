@@ -4,15 +4,16 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i5;
-import 'dart:io' as _i6;
+import 'dart:io' as _i7;
 
 import 'package:mockito/mockito.dart' as _i1;
-import 'package:nostr_sdk/event.dart' as _i9;
+import 'package:nostr_sdk/event.dart' as _i10;
 import 'package:openvine/models/pending_upload.dart' as _i2;
+import 'package:openvine/models/vine_draft.dart' as _i6;
 import 'package:openvine/services/auth_service.dart' as _i3;
-import 'package:openvine/services/proofmode_session_service.dart' as _i7;
+import 'package:openvine/services/proofmode_session_service.dart' as _i8;
 import 'package:openvine/services/upload_manager.dart' as _i4;
-import 'package:openvine/services/user_profile_service.dart' as _i8;
+import 'package:openvine/services/user_profile_service.dart' as _i9;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -147,8 +148,33 @@ class MockUploadManager extends _i1.Mock implements _i4.UploadManager {
           as _i5.Future<void>);
 
   @override
+  _i5.Future<_i2.PendingUpload> startUploadFromDraft({
+    required _i6.VineDraft? draft,
+    required String? nostrPubkey,
+    Duration? videoDuration,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#startUploadFromDraft, [], {
+              #draft: draft,
+              #nostrPubkey: nostrPubkey,
+              #videoDuration: videoDuration,
+            }),
+            returnValue: _i5.Future<_i2.PendingUpload>.value(
+              _FakePendingUpload_0(
+                this,
+                Invocation.method(#startUploadFromDraft, [], {
+                  #draft: draft,
+                  #nostrPubkey: nostrPubkey,
+                  #videoDuration: videoDuration,
+                }),
+              ),
+            ),
+          )
+          as _i5.Future<_i2.PendingUpload>);
+
+  @override
   _i5.Future<_i2.PendingUpload> startUpload({
-    required _i6.File? videoFile,
+    required _i7.File? videoFile,
     required String? nostrPubkey,
     String? thumbnailPath,
     String? title,
@@ -157,7 +183,7 @@ class MockUploadManager extends _i1.Mock implements _i4.UploadManager {
     int? videoWidth,
     int? videoHeight,
     Duration? videoDuration,
-    _i7.ProofManifest? proofManifest,
+    _i8.ProofManifest? proofManifest,
   }) =>
       (super.noSuchMethod(
             Invocation.method(#startUpload, [], {
@@ -451,7 +477,7 @@ class MockAuthService extends _i1.Mock implements _i3.AuthService {
 
   @override
   _i5.Future<void> refreshCurrentProfile(
-    _i8.UserProfileService? userProfileService,
+    _i9.UserProfileService? userProfileService,
   ) =>
       (super.noSuchMethod(
             Invocation.method(#refreshCurrentProfile, [userProfileService]),
@@ -490,7 +516,7 @@ class MockAuthService extends _i1.Mock implements _i3.AuthService {
           as _i5.Future<String?>);
 
   @override
-  _i5.Future<_i9.Event?> createAndSignEvent({
+  _i5.Future<_i10.Event?> createAndSignEvent({
     required int? kind,
     required String? content,
     List<List<String>>? tags,
@@ -503,9 +529,9 @@ class MockAuthService extends _i1.Mock implements _i3.AuthService {
               #tags: tags,
               #biometricPrompt: biometricPrompt,
             }),
-            returnValue: _i5.Future<_i9.Event?>.value(),
+            returnValue: _i5.Future<_i10.Event?>.value(),
           )
-          as _i5.Future<_i9.Event?>);
+          as _i5.Future<_i10.Event?>);
 
   @override
   void dispose() => super.noSuchMethod(

@@ -9,10 +9,7 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:riverpod/riverpod.dart' show Ref;
 import 'package:openvine/services/vine_recording_controller.dart'
     show VineRecordingController, VineRecordingState, RecordingSegment, MacOSCameraInterface, CameraPlatformInterface;
-import 'package:openvine/services/proofmode_session_service.dart'
-    show ProofManifest, ProofModeSessionService;
-import 'package:openvine/services/proofmode_key_service.dart';
-import 'package:openvine/services/proofmode_attestation_service.dart';
+import 'package:openvine/models/native_proof_data.dart';
 import 'package:openvine/models/vine_draft.dart';
 import 'package:openvine/models/aspect_ratio.dart' as model;
 import 'package:openvine/providers/app_providers.dart';
@@ -20,17 +17,17 @@ import 'package:openvine/utils/unified_logger.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 
-/// Result returned from stopRecording containing video file, draft ID, and proof manifest
+/// Result returned from stopRecording containing video file, draft ID, and native proof
 class RecordingResult {
   const RecordingResult({
     required this.videoFile,
     required this.draftId,
-    this.proofManifest,
+    this.nativeProof,
   });
 
   final File? videoFile;
   final String? draftId;
-  final ProofManifest? proofManifest;
+  final NativeProofData? nativeProof;
 }
 
 /// State class for VineRecording that captures all necessary UI state
@@ -193,7 +190,7 @@ class VineRecordingNotifier extends StateNotifier<VineRecordingUIState> {
         return RecordingResult(
           videoFile: result.$1,
           draftId: draft.id,
-          proofManifest: result.$2,
+          nativeProof: result.$2,
         );
       } catch (e) {
         Log.error('📹 Failed to auto-create draft: $e', category: LogCategory.video);
@@ -201,7 +198,7 @@ class VineRecordingNotifier extends StateNotifier<VineRecordingUIState> {
         return RecordingResult(
           videoFile: result.$1,
           draftId: null,
-          proofManifest: result.$2,
+          nativeProof: result.$2,
         );
       }
     }
@@ -209,11 +206,11 @@ class VineRecordingNotifier extends StateNotifier<VineRecordingUIState> {
     return RecordingResult(
       videoFile: null,
       draftId: null,
-      proofManifest: result.$2,
+      nativeProof: result.$2,
     );
   }
 
-  Future<(File?, ProofManifest?)> finishRecording() async {
+  Future<(File?, NativeProofData?)> finishRecording() async {
     final result = await _controller.finishRecording();
     updateState();
     return result;
@@ -387,12 +384,8 @@ class VineRecordingNotifier extends StateNotifier<VineRecordingUIState> {
 /// Provider for VineRecordingController with reactive state management
 final vineRecordingProvider =
     StateNotifierProvider<VineRecordingNotifier, VineRecordingUIState>((ref) {
-  // Initialize ProofMode services
-  final keyService = ProofModeKeyService();
-  final attestationService = ProofModeAttestationService();
-  final proofModeSession = ProofModeSessionService(keyService, attestationService);
-
-  final controller = VineRecordingController(proofModeSession: proofModeSession);
+  // Native ProofMode is initialized directly in recording controller
+  final controller = VineRecordingController();
   final notifier = VineRecordingNotifier(controller, ref);
 
   ref.onDispose(() {

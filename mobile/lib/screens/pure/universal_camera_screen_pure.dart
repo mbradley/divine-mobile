@@ -9,8 +9,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/models/aspect_ratio.dart' as vine;
 import 'package:openvine/models/vine_draft.dart';
+import 'package:openvine/models/native_proof_data.dart';
 import 'package:openvine/providers/vine_recording_provider.dart';
-import 'package:openvine/services/proofmode_session_service.dart';
 import 'package:openvine/screens/vine_drafts_screen.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/utils/video_controller_cleanup.dart';
@@ -1087,14 +1087,14 @@ class _UniversalCameraScreenPureState
         category: LogCategory.video,
       );
 
-      final (videoFile, proofManifest) = await notifier.finishRecording();
+      final (videoFile, nativeProof) = await notifier.finishRecording();
       Log.info(
-        '📹 Recording finished, video: ${videoFile?.path}, proof: ${proofManifest != null}',
+        '📹 Recording finished, video: ${videoFile?.path}, proof: ${nativeProof != null}',
         category: LogCategory.video,
       );
 
       if (videoFile != null && mounted) {
-        _processRecording(videoFile, proofManifest);
+        _processRecording(videoFile, nativeProof);
       } else {
         Log.warning(
           '📹 No file returned from finishRecording',
@@ -1221,7 +1221,7 @@ class _UniversalCameraScreenPureState
 
   void _processRecording(
     File recordedFile,
-    ProofManifest? proofManifest,
+    NativeProofData? nativeProof,
   ) async {
     // Guard against double-processing
     if (_isProcessing) {
@@ -1246,18 +1246,18 @@ class _UniversalCameraScreenPureState
       final prefs = await SharedPreferences.getInstance();
       final draftService = DraftStorageService(prefs);
 
-      // Serialize ProofManifest to JSON if available
+      // Serialize NativeProofData to JSON if available
       String? proofManifestJson;
-      if (proofManifest != null) {
+      if (nativeProof != null) {
         try {
-          proofManifestJson = jsonEncode(proofManifest.toJson());
+          proofManifestJson = jsonEncode(nativeProof.toJson());
           Log.info(
-            '📜 ProofManifest attached to draft from universal camera',
+            '📜 NativeProofData attached to draft from universal camera',
             category: LogCategory.video,
           );
         } catch (e) {
           Log.error(
-            'Failed to serialize ProofManifest for draft: $e',
+            'Failed to serialize NativeProofData for draft: $e',
             category: LogCategory.video,
           );
         }

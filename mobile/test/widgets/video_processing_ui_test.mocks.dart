@@ -4,11 +4,12 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i4;
-import 'dart:io' as _i5;
+import 'dart:io' as _i6;
 
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:openvine/models/pending_upload.dart' as _i2;
-import 'package:openvine/services/proofmode_session_service.dart' as _i6;
+import 'package:openvine/models/vine_draft.dart' as _i5;
+import 'package:openvine/services/proofmode_session_service.dart' as _i7;
 import 'package:openvine/services/upload_manager.dart' as _i3;
 
 // ignore_for_file: type=lint
@@ -139,8 +140,33 @@ class MockUploadManager extends _i1.Mock implements _i3.UploadManager {
           as _i4.Future<void>);
 
   @override
+  _i4.Future<_i2.PendingUpload> startUploadFromDraft({
+    required _i5.VineDraft? draft,
+    required String? nostrPubkey,
+    Duration? videoDuration,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#startUploadFromDraft, [], {
+              #draft: draft,
+              #nostrPubkey: nostrPubkey,
+              #videoDuration: videoDuration,
+            }),
+            returnValue: _i4.Future<_i2.PendingUpload>.value(
+              _FakePendingUpload_0(
+                this,
+                Invocation.method(#startUploadFromDraft, [], {
+                  #draft: draft,
+                  #nostrPubkey: nostrPubkey,
+                  #videoDuration: videoDuration,
+                }),
+              ),
+            ),
+          )
+          as _i4.Future<_i2.PendingUpload>);
+
+  @override
   _i4.Future<_i2.PendingUpload> startUpload({
-    required _i5.File? videoFile,
+    required _i6.File? videoFile,
     required String? nostrPubkey,
     String? thumbnailPath,
     String? title,
@@ -149,7 +175,7 @@ class MockUploadManager extends _i1.Mock implements _i3.UploadManager {
     int? videoWidth,
     int? videoHeight,
     Duration? videoDuration,
-    _i6.ProofManifest? proofManifest,
+    _i7.ProofManifest? proofManifest,
   }) =>
       (super.noSuchMethod(
             Invocation.method(#startUpload, [], {

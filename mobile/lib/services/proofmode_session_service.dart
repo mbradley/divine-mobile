@@ -248,7 +248,14 @@ class ProofModeSessionService {
     int frameSampleRate = 1,
     int maxFrameHashes = 1000,
   }) async {
-    if (!await ProofModeConfig.isCaptureEnabled) {
+    Log.debug('startSession() called',
+        name: 'ProofModeSessionService', category: LogCategory.system);
+
+    final captureEnabled = await ProofModeConfig.isCaptureEnabled;
+    Log.debug('ProofModeConfig.isCaptureEnabled = $captureEnabled',
+        name: 'ProofModeSessionService', category: LogCategory.system);
+
+    if (!captureEnabled) {
       Log.info('ProofMode capture disabled, skipping session start',
           name: 'ProofModeSessionService', category: LogCategory.system);
       return null;
@@ -259,20 +266,35 @@ class ProofModeSessionService {
 
     try {
       // Generate session ID and challenge nonce
+      Log.debug('Generating session ID',
+          name: 'ProofModeSessionService', category: LogCategory.system);
       final sessionId = _generateSessionId();
+      Log.debug('Generated session ID: $sessionId',
+          name: 'ProofModeSessionService', category: LogCategory.system);
+
+      Log.debug('Generating challenge nonce',
+          name: 'ProofModeSessionService', category: LogCategory.system);
       final challengeNonce = _generateChallengeNonce();
+      Log.debug('Generated challenge nonce',
+          name: 'ProofModeSessionService', category: LogCategory.system);
 
       // Get device attestation (gracefully handle errors)
       DeviceAttestation? attestation;
       try {
+        Log.debug('Generating device attestation',
+            name: 'ProofModeSessionService', category: LogCategory.system);
         attestation =
             await _attestationService.generateAttestation(challengeNonce);
+        Log.debug('Device attestation generated successfully',
+            name: 'ProofModeSessionService', category: LogCategory.system);
       } catch (e) {
         Log.warning('Failed to generate device attestation: $e',
             name: 'ProofModeSessionService', category: LogCategory.system);
         // Continue without attestation
       }
 
+      Log.debug('Creating ProofSession object',
+          name: 'ProofModeSessionService', category: LogCategory.system);
       _currentSession = ProofSession(
         sessionId: sessionId,
         challengeNonce: challengeNonce,
@@ -281,13 +303,15 @@ class ProofModeSessionService {
         frameSampleRate: frameSampleRate,
         maxFrameHashes: maxFrameHashes,
       );
+      Log.debug('ProofSession created, _currentSession is now set',
+          name: 'ProofModeSessionService', category: LogCategory.system);
 
       Log.info('Started ProofMode session: $sessionId',
           name: 'ProofModeSessionService', category: LogCategory.system);
 
       return sessionId;
-    } catch (e) {
-      Log.error('Failed to start ProofMode session: $e',
+    } catch (e, stackTrace) {
+      Log.error('Failed to start ProofMode session: $e\n$stackTrace',
           name: 'ProofModeSessionService', category: LogCategory.system);
       return null;
     }

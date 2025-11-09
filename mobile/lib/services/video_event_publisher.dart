@@ -324,28 +324,28 @@ class VideoEventPublisher {
         tags.add(['expiration', expirationTimestamp.toString()]);
       }
 
-      // Add ProofMode tags if manifest exists
+      // Add ProofMode tags if native proof exists
       if (upload.hasProofMode) {
         try {
-          final manifest = upload.proofManifest;
-          if (manifest != null) {
+          final nativeProof = upload.nativeProof;
+          if (nativeProof != null) {
             Log.info('📜 Adding ProofMode verification tags to Nostr event',
                 name: 'VideoEventPublisher', category: LogCategory.video);
 
             // Add verification level tag
-            final verificationLevel = getVerificationLevel(manifest);
+            final verificationLevel = getVerificationLevel(nativeProof);
             tags.add(['proof-verification-level', verificationLevel]);
             Log.verbose('Added proof-verification-level tag: $verificationLevel',
                 name: 'VideoEventPublisher', category: LogCategory.video);
 
-            // Add ProofMode manifest tag (complete JSON manifest)
-            final manifestTag = createProofManifestTag(manifest);
-            tags.add(['proofmode', manifestTag]);
-            Log.verbose('Added proofmode manifest tag (${manifestTag.length} chars)',
+            // Add ProofMode native proof tag (complete JSON proof data)
+            final proofTag = createProofManifestTag(nativeProof);
+            tags.add(['proofmode', proofTag]);
+            Log.verbose('Added proofmode proof tag (${proofTag.length} chars)',
                 name: 'VideoEventPublisher', category: LogCategory.video);
 
             // Add device attestation tag if available
-            final deviceTag = createDeviceAttestationTag(manifest);
+            final deviceTag = createDeviceAttestationTag(nativeProof);
             if (deviceTag != null) {
               tags.add(['proof-device-attestation', deviceTag]);
               Log.verbose('Added proof-device-attestation tag',
@@ -353,7 +353,7 @@ class VideoEventPublisher {
             }
 
             // Add PGP fingerprint tag if available
-            final pgpTag = createPgpFingerprintTag(manifest);
+            final pgpTag = createPgpFingerprintTag(nativeProof);
             if (pgpTag != null) {
               tags.add(['proof-pgp-fingerprint', pgpTag]);
               Log.verbose('Added proof-pgp-fingerprint tag: $pgpTag',
