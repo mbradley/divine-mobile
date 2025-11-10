@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:openvine/services/account_deletion_service.dart';
 import 'package:openvine/services/age_verification_service.dart';
 import 'package:openvine/services/geo_blocking_service.dart';
 import 'package:openvine/services/analytics_service.dart';
@@ -567,6 +568,17 @@ Future<ContentDeletionService> contentDeletionService(Ref ref) async {
   await service.initialize();
 
   return service;
+}
+
+/// Account Deletion Service for NIP-62 Request to Vanish
+@riverpod
+AccountDeletionService accountDeletionService(Ref ref) {
+  final nostrService = ref.watch(nostrServiceProvider);
+  final authService = ref.watch(authServiceProvider);
+  return AccountDeletionService(
+    nostrService: nostrService,
+    authService: authService,
+  );
 }
 
 /// Broken video tracker service for filtering non-functional videos

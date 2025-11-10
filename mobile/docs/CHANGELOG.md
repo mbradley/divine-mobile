@@ -7,6 +7,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Account Deletion (2025-11-10)
+
+#### Features
+- **Added complete account deletion feature with NIP-62 support** - Users can permanently delete their Nostr identity and all content
+  - New "Delete Account" option in Settings under Account section
+  - Multi-step confirmation with clear permanence warning
+  - NIP-62 "Request to Vanish" event broadcast to all relays
+  - Immediate local key deletion from device storage
+  - Automatic sign out after deletion
+  - Optional "Create New Account" flow post-deletion
+  - Strong visual warnings with red UI to emphasize irreversibility
+
+#### Technical Details
+- Created `lib/services/account_deletion_service.dart`:
+  - Handles NIP-62 kind 62 event creation with ALL_RELAYS tag
+  - Broadcasts deletion request to all configured relays
+  - Manages deletion result state (success/failure)
+  - Custom reason support (defaults to "User requested account deletion via diVine app")
+- Created `lib/widgets/delete_account_dialog.dart`:
+  - Warning dialog with clear consequences explanation
+  - Completion dialog with new account creation option
+  - Dark mode compliant design with red danger accents
+  - Cancel/Delete button layout following platform conventions
+- Modified `lib/screens/settings_screen.dart`:
+  - Added new "Account" section after Profile section
+  - "Delete Account" tile with red icon and text for visual warning
+  - Integrated dialog flow for deletion confirmation
+- Modified `lib/providers/app_providers.dart`:
+  - Added `accountDeletionServiceProvider` for dependency injection
+- Error handling for network failures and broadcast issues
+  - Graceful fallback when relays are unreachable
+  - Clear error messages for retry scenarios
+  - No local key deletion unless NIP-62 broadcast succeeds
+
+#### Test Coverage
+- Created `test/services/account_deletion_service_test.dart`:
+  - 15 comprehensive unit tests for deletion service
+  - NIP-62 event format validation
+  - Broadcast success/failure scenarios
+  - Custom reason support
+- Created `test/widgets/delete_account_dialog_test.dart`:
+  - 8 widget tests for dialog behavior
+  - Warning and completion dialog rendering
+  - Button tap handlers and navigation
+- Created `test/integration/account_deletion_flow_test.dart`:
+  - 6 integration tests for complete deletion flow
+  - Settings navigation to deletion completion
+  - Key removal verification
+  - Sign out state validation
+  - Create new account flow
+- All 29 tests passing
+
+#### NIP-62 Implementation
+- Event structure follows NIP-62 specification exactly
+- `["relay", "ALL_RELAYS"]` tag requests network-wide deletion
+- Relays SHOULD delete all events from the user's pubkey
+- Relays MAY retain signed deletion request for compliance
+- No guarantees about relay compliance (protocol limitation)
+
+#### User Experience
+- Clear communication about deletion permanence
+- Honest disclosure about relay compliance variability
+- No false promises of complete erasure
+- Quick 3-tap flow: Settings → Delete Account → Confirm
+- Minimal friction for legitimate deletion requests
+
 ### Fixed - Comments Loading (2025-11-08)
 
 #### Bug Fixes

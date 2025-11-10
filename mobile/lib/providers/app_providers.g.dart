@@ -2016,6 +2016,59 @@ final class ContentDeletionServiceProvider
 String _$contentDeletionServiceHash() =>
     r'8594abe369924c5d080809e29ba7745da70450c0';
 
+/// Account Deletion Service for NIP-62 Request to Vanish
+
+@ProviderFor(accountDeletionService)
+const accountDeletionServiceProvider = AccountDeletionServiceProvider._();
+
+/// Account Deletion Service for NIP-62 Request to Vanish
+
+final class AccountDeletionServiceProvider
+    extends
+        $FunctionalProvider<
+          AccountDeletionService,
+          AccountDeletionService,
+          AccountDeletionService
+        >
+    with $Provider<AccountDeletionService> {
+  /// Account Deletion Service for NIP-62 Request to Vanish
+  const AccountDeletionServiceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'accountDeletionServiceProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$accountDeletionServiceHash();
+
+  @$internal
+  @override
+  $ProviderElement<AccountDeletionService> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  AccountDeletionService create(Ref ref) {
+    return accountDeletionService(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(AccountDeletionService value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<AccountDeletionService>(value),
+    );
+  }
+}
+
+String _$accountDeletionServiceHash() =>
+    r'659c0ee712559ba34e462dc9b236c40c80651240';
+
 /// Broken video tracker service for filtering non-functional videos
 
 @ProviderFor(brokenVideoTracker)
