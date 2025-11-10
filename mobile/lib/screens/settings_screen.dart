@@ -15,6 +15,7 @@ import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/widgets/bug_report_dialog.dart';
 import 'package:openvine/widgets/camera_fab.dart';
 import 'package:openvine/widgets/vine_bottom_nav.dart';
+import 'package:openvine/widgets/delete_account_dialog.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -69,6 +70,20 @@ class SettingsScreen extends ConsumerWidget {
                   builder: (context) => const KeyManagementScreen(),
                 ),
               ),
+            ),
+          ],
+
+          // Account Section (only show when authenticated)
+          if (isAuthenticated) ...[
+            _buildSectionHeader('Account'),
+            _buildSettingsTile(
+              context,
+              icon: Icons.delete_forever,
+              title: 'Delete Account',
+              subtitle: 'Permanently delete all your content from Nostr relays',
+              onTap: () => _handleDeleteAccount(context, ref),
+              iconColor: Colors.red,
+              titleColor: Colors.red,
             ),
           ],
 
@@ -221,13 +236,15 @@ class SettingsScreen extends ConsumerWidget {
     required String title,
     required String subtitle,
     required VoidCallback onTap,
+    Color? iconColor,
+    Color? titleColor,
   }) =>
       ListTile(
-        leading: Icon(icon, color: VineTheme.vineGreen),
+        leading: Icon(icon, color: iconColor ?? VineTheme.vineGreen),
         title: Text(
           title,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: titleColor ?? Colors.white,
             fontSize: 16,
             fontWeight: FontWeight.w500,
           ),
@@ -242,4 +259,63 @@ class SettingsScreen extends ConsumerWidget {
         trailing: const Icon(Icons.chevron_right, color: Colors.grey),
         onTap: onTap,
       );
+
+  Future<void> _handleDeleteAccount(BuildContext context, WidgetRef ref) async {
+    final deletionService = ref.read(accountDeletionServiceProvider);
+    final authService = ref.read(authServiceProvider);
+
+    // Show warning dialog
+    await showDeleteAccountWarningDialog(
+      context: context,
+      onConfirm: () async {
+        // Show loading indicator
+        if (!context.mounted) return;
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const Center(
+            child: CircularProgressIndicator(color: VineTheme.vineGreen),
+          ),
+        );
+
+        // Execute deletion
+        final result = await deletionService.deleteAccount();
+
+        // Close loading indicator
+        if (!context.mounted) return;
+        Navigator.of(context).pop();
+
+        if (result.success) {
+          // Sign out and delete keys
+          await authService.signOut(deleteKeys: true);
+
+          // Show completion dialog
+          if (!context.mounted) return;
+          await showDeleteAccountCompletionDialog(
+            context: context,
+            onCreateNewAccount: () {
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(
+                  builder: (context) => const ProfileSetupScreen(isNewUser: true),
+                ),
+                (route) => false,
+              );
+            },
+          );
+        } else {
+          // Show error
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                result.error ?? 'Failed to delete account',
+                style: const TextStyle(color: Colors.white),
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      },
+    );
+  }
 }
