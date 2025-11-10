@@ -1,10 +1,14 @@
-// ABOUTME: Stub ProofMode camera integration for backward compatibility with tests
-// ABOUTME: Minimal implementation to resolve compilation errors in legacy test files
+// ABOUTME: ProofMode camera integration for real-time frame capture during vine recording
+// ABOUTME: Coordinates camera recording with ProofMode session management and frame hashing
 
 import 'camera_service.dart';
+import 'camera_service_impl.dart';
 import 'proofmode_key_service.dart';
 import 'proofmode_attestation_service.dart';
 import 'proofmode_session_service.dart';
+import 'camera_frame_capture_service.dart';
+import 'proofmode_config.dart';
+import 'package:openvine/utils/unified_logger.dart';
 
 /// Result of ProofMode-enabled recording
 class ProofModeVineRecordingResult extends VineRecordingResult {
@@ -24,63 +28,142 @@ class ProofModeVineRecordingResult extends VineRecordingResult {
 /// ProofMode camera integration service
 class ProofModeCameraIntegration {
   final CameraService _cameraService;
-  final ProofModeKeyService _keyService;
-  final ProofModeAttestationService _attestationService;
   final ProofModeSessionService _sessionService;
+  late final CameraFrameCaptureService _frameCaptureService;
 
   ProofModeCameraIntegration(
     this._cameraService,
-    this._keyService,
-    this._attestationService,
+    ProofModeKeyService keyService,
+    ProofModeAttestationService attestationService,
     this._sessionService,
-  );
+  ) {
+    _frameCaptureService = CameraFrameCaptureService(_sessionService);
+  }
 
   Future<void> initialize() async {
-    // Stub initialization
-    // Reference injected services to avoid unused field lints in this stub
-    // while keeping constructor signature compatible with tests.
-    // ignore: unnecessary_statements
-    _keyService.hashCode;
-    // ignore: unnecessary_statements
-    _attestationService.hashCode;
-    // ignore: unnecessary_statements
-    _sessionService.hashCode;
+    // Initialize ProofMode services
+    await _sessionService.ensureInitialized();
   }
 
   Future<void> startRecording() async {
+    // Check if ProofMode is enabled
+    final proofModeEnabled = await ProofModeConfig.isCaptureEnabled;
+
+    if (proofModeEnabled) {
+      // Start ProofMode session
+      await _sessionService.startSession();
+      await _sessionService.startRecordingSegment();
+
+      // Set up frame capture callback if camera supports it
+      if (_cameraService case final CameraServiceImpl cameraImpl) {
+        cameraImpl.setFrameCallback((image) {
+          // Process frame asynchronously to avoid blocking recording
+          _frameCaptureService.onFrameAvailable(image);
+        });
+        Log.info('Frame capture enabled for recording',
+            name: 'ProofModeCameraIntegration', category: LogCategory.system);
+      } else {
+        Log.warning('Camera service does not support frame capture',
+            name: 'ProofModeCameraIntegration', category: LogCategory.system);
+      }
+    }
+
+    // Start camera recording (with frame streaming if callback is set)
     await _cameraService.startRecording();
   }
 
   Future<ProofModeVineRecordingResult> stopRecording() async {
     final result = await _cameraService.stopRecording();
-    return ProofModeVineRecordingResult(
-      videoFile: result.videoFile,
-      duration: result.duration,
-      hasProof: true,
-      proofLevel: 'basic',
-      proofManifest: {'test': true},
-    );
+
+    // Check if we had an active ProofMode session
+    final proofSession = _sessionService.currentSession;
+
+    if (proofSession != null) {
+      // Stop the current recording segment
+      await _sessionService.stopRecordingSegment();
+
+      // Clear frame capture callback
+      if (_cameraService case final CameraServiceImpl cameraImpl) {
+        cameraImpl.setFrameCallback(null);
+      }
+
+      // Finalize the session and generate proof manifest
+      // Note: We don't have the final video hash yet - that would be computed after encoding
+      // For now, we return the proof data we've collected
+      final manifest = {
+        'sessionId': proofSession.sessionId,
+        'segments': proofSession.segments.length,
+        'frameHashes': proofSession.frameHashes.length,
+        'interactions': proofSession.interactions.length,
+        'hasDeviceAttestation': proofSession.deviceAttestation != null,
+      };
+
+      return ProofModeVineRecordingResult(
+        videoFile: result.videoFile,
+        duration: result.duration,
+        hasProof: true,
+        proofLevel: _determineProofLevel(proofSession),
+        proofManifest: manifest,
+      );
+    } else {
+      // No ProofMode session - return standard result
+      return ProofModeVineRecordingResult(
+        videoFile: result.videoFile,
+        duration: result.duration,
+        hasProof: false,
+        proofLevel: 'unverified',
+        proofManifest: null,
+      );
+    }
   }
 
-  bool get hasActiveProofSession => false;
+  String _determineProofLevel(ProofSession session) {
+    if (session.deviceAttestation != null &&
+        session.deviceAttestation!.isHardwareBacked) {
+      return 'verified_mobile';
+    } else if (session.deviceAttestation != null) {
+      return 'verified_web';
+    } else {
+      return 'basic_proof';
+    }
+  }
+
+  bool get hasActiveProofSession => _sessionService.currentSession != null;
 
   void recordTouchInteraction() {
-    // Stub implementation
+    if (_sessionService.currentSession != null) {
+      // Record touch at center of screen (coordinate handling would be done by caller)
+      _sessionService.recordInteraction('touch', 0.5, 0.5);
+    }
   }
 
   Future<void> pauseRecording() async {
-    // Stub implementation
+    if (_sessionService.currentSession != null) {
+      await _sessionService.pauseRecording();
+    }
   }
 
   Future<void> resumeRecording() async {
-    // Stub implementation
+    if (_sessionService.currentSession != null) {
+      await _sessionService.resumeRecording();
+    }
   }
 
   Future<void> cancelRecording() async {
-    // Stub implementation
+    // Clear frame capture callback
+    if (_cameraService case final CameraServiceImpl cameraImpl) {
+      cameraImpl.setFrameCallback(null);
+    }
+
+    if (_sessionService.currentSession != null) {
+      await _sessionService.cancelSession();
+    }
   }
 
   void dispose() {
-    // Stub cleanup
+    // Clean up resources
+    if (_cameraService case final CameraServiceImpl cameraImpl) {
+      cameraImpl.setFrameCallback(null);
+    }
   }
 }

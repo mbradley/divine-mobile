@@ -16,19 +16,30 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Result type for Blossom upload operations
 class BlossomUploadResult {
   final bool success;
-  final String? videoId;
-  final String? cdnUrl;
-  final String? gifUrl;
-  final String? thumbnailUrl;
-  final String? blurhash;
+  final String? videoId; // SHA-256 hash
+  final String? url; // Primary HLS URL from server
+  final String? fallbackUrl; // R2 MP4 URL (always available immediately)
+  final String? streamingMp4Url; // BunnyStream MP4 URL (may be processing)
+  final String? streamingHlsUrl; // BunnyStream HLS URL (same as url)
+  final String? thumbnailUrl; // Auto-generated thumbnail
+  final String? streamingStatus; // "processing" or "ready"
+  final String? gifUrl; // Deprecated - keeping for backwards compatibility
+  final String? blurhash; // Deprecated - keeping for backwards compatibility
   final String? errorMessage;
+
+  // Convenience getter for backwards compatibility
+  String? get cdnUrl => fallbackUrl ?? url;
 
   const BlossomUploadResult({
     required this.success,
     this.videoId,
-    this.cdnUrl,
-    this.gifUrl,
+    this.url,
+    this.fallbackUrl,
+    this.streamingMp4Url,
+    this.streamingHlsUrl,
     this.thumbnailUrl,
+    this.streamingStatus,
+    this.gifUrl,
     this.blurhash,
     this.errorMessage,
   });
@@ -290,22 +301,62 @@ class BlossomUploadService {
         final responseData = response.data;
 
         if (responseData is Map) {
-          final urlRaw = responseData['url'];
-          final cdnUrl = urlRaw?.toString();
+          // Log FULL response to understand what server returns
+          Log.info('==========================================',
+              name: 'BlossomUploadService', category: LogCategory.video);
+          Log.info('BLOSSOM SERVER RESPONSE FIELDS:',
+              name: 'BlossomUploadService', category: LogCategory.video);
+          for (final key in responseData.keys) {
+            Log.info('  $key: ${responseData[key]}',
+                name: 'BlossomUploadService', category: LogCategory.video);
+          }
+          Log.info('==========================================',
+              name: 'BlossomUploadService', category: LogCategory.video);
 
-          if (cdnUrl != null && cdnUrl.isNotEmpty) {
+          // Extract all URL fields from server response
+          final url = responseData['url']?.toString();
+          final fallbackUrl = responseData['fallbackUrl']?.toString();
+
+          // Extract streaming info if present
+          String? streamingMp4Url;
+          String? streamingHlsUrl;
+          String? thumbnailUrl;
+          String? streamingStatus;
+
+          final streamingData = responseData['streaming'];
+          if (streamingData is Map) {
+            streamingMp4Url = streamingData['mp4Url']?.toString();
+            streamingHlsUrl = streamingData['hlsUrl']?.toString();
+            thumbnailUrl = streamingData['thumbnailUrl']?.toString();
+            streamingStatus = streamingData['status']?.toString();
+          }
+
+          if (url != null && url.isNotEmpty) {
             onProgress?.call(1.0);
 
             Log.info('✅ Blossom upload successful',
                 name: 'BlossomUploadService', category: LogCategory.video);
-            Log.info('  URL: $cdnUrl',
+            Log.info('  Primary URL (HLS): $url',
+                name: 'BlossomUploadService', category: LogCategory.video);
+            Log.info('  Fallback URL (R2 MP4): $fallbackUrl',
+                name: 'BlossomUploadService', category: LogCategory.video);
+            Log.info('  Streaming MP4: $streamingMp4Url',
+                name: 'BlossomUploadService', category: LogCategory.video);
+            Log.info('  Thumbnail: $thumbnailUrl',
+                name: 'BlossomUploadService', category: LogCategory.video);
+            Log.info('  Status: $streamingStatus',
                 name: 'BlossomUploadService', category: LogCategory.video);
             Log.info('  Video ID (hash): $fileHash',
                 name: 'BlossomUploadService', category: LogCategory.video);
 
             return BlossomUploadResult(
               success: true,
-              cdnUrl: cdnUrl,
+              url: url,
+              fallbackUrl: fallbackUrl,
+              streamingMp4Url: streamingMp4Url,
+              streamingHlsUrl: streamingHlsUrl,
+              thumbnailUrl: thumbnailUrl,
+              streamingStatus: streamingStatus,
               videoId: fileHash,
             );
           }
@@ -330,7 +381,7 @@ class BlossomUploadService {
 
         return BlossomUploadResult(
           success: true,
-          cdnUrl: existingUrl,
+          fallbackUrl: existingUrl, // Use fallbackUrl for R2 MP4
           videoId: fileHash,
         );
       }
@@ -491,7 +542,7 @@ class BlossomUploadService {
         return BlossomUploadResult(
           success: true,
           videoId: fileHash,
-          cdnUrl: existingUrl,
+          fallbackUrl: existingUrl,
         );
       }
 
@@ -532,7 +583,7 @@ class BlossomUploadService {
 
             return BlossomUploadResult(
               success: true,
-              cdnUrl: correctedUrl,
+              fallbackUrl: correctedUrl,
               videoId: imageId,
             );
           } else {

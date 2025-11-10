@@ -142,10 +142,25 @@ class MobileCameraInterface extends CameraPlatformInterface {
     // Prepare for video recording - critical for iOS
     try {
       await _controller!.prepareForVideoRecording();
+      Log.info('Video recording preparation successful after camera switch',
+          name: 'VineRecordingController', category: LogCategory.system);
     } catch (e) {
       Log.warning('prepareForVideoRecording failed during camera switch: $e',
           name: 'VineRecordingController', category: LogCategory.system);
       // Continue anyway - some platforms don't need this
+    }
+
+    // iOS WORKAROUND: Try pausing and resuming preview to force texture refresh
+    try {
+      if (Platform.isIOS) {
+        await _controller!.pausePreview();
+        await _controller!.resumePreview();
+        Log.info('iOS: Paused and resumed preview to refresh texture',
+            name: 'VineRecordingController', category: LogCategory.system);
+      }
+    } catch (e) {
+      Log.warning('Preview pause/resume failed: $e',
+          name: 'VineRecordingController', category: LogCategory.system);
     }
 
     // Initialize zoom levels
@@ -355,13 +370,21 @@ class MobileCameraInterface extends CameraPlatformInterface {
   @override
   Widget get previewWidget {
     final controller = _controller;
-    Log.info('📸 previewWidget getter called: controller=${controller != null ? "exists" : "null"}, isInitialized=${controller?.value.isInitialized ?? false}',
+    Log.info('📸 previewWidget getter called: controller=${controller != null ? "exists" : "null"}, isInitialized=${controller?.value.isInitialized ?? false}, cameraIndex=$_currentCameraIndex',
         name: 'VineRecordingController', category: LogCategory.system);
 
     if (controller != null && controller.value.isInitialized) {
-      Log.info('📸 Returning CameraPreview widget with initialized controller',
+      Log.info('📸 Returning CameraPreview widget with initialized controller for camera $_currentCameraIndex',
           name: 'VineRecordingController', category: LogCategory.system);
-      return CameraPreview(controller);
+      // CRITICAL: Use RepaintBoundary to force complete repaint when key changes
+      // This helps ensure the platform view texture updates properly on iOS
+      return RepaintBoundary(
+        key: ValueKey('camera_boundary_$_currentCameraIndex'),
+        child: CameraPreview(
+          controller,
+          key: ValueKey('camera_preview_$_currentCameraIndex'),
+        ),
+      );
     }
 
     Log.info('📸 Returning loading placeholder (controller not ready)',

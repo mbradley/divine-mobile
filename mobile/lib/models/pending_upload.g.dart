@@ -38,13 +38,16 @@ class PendingUploadAdapter extends TypeAdapter<PendingUpload> {
       videoHeight: (fields[18] as num?)?.toInt(),
       videoDurationMillis: (fields[19] as num?)?.toInt(),
       proofManifestJson: fields[20] as String?,
+      streamingMp4Url: fields[21] as String?,
+      streamingHlsUrl: fields[22] as String?,
+      fallbackUrl: fields[23] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, PendingUpload obj) {
     writer
-      ..writeByte(21)
+      ..writeByte(24)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -86,7 +89,13 @@ class PendingUploadAdapter extends TypeAdapter<PendingUpload> {
       ..writeByte(19)
       ..write(obj.videoDurationMillis)
       ..writeByte(20)
-      ..write(obj.proofManifestJson);
+      ..write(obj.proofManifestJson)
+      ..writeByte(21)
+      ..write(obj.streamingMp4Url)
+      ..writeByte(22)
+      ..write(obj.streamingHlsUrl)
+      ..writeByte(23)
+      ..write(obj.fallbackUrl);
   }
 
   @override

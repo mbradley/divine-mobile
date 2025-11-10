@@ -18,6 +18,9 @@ class CameraServiceImpl extends CameraService {
   CameraDescription? _selectedCamera;
   FlashMode _currentFlashMode = FlashMode.off;
 
+  /// Optional frame capture callback for ProofMode
+  void Function(CameraImage)? _frameCallback;
+
   /// Check if the camera is initialized
   bool get isInitialized =>
     Platform.isMacOS ? _macOSController != null : _controller?.value.isInitialized ?? false;
@@ -113,7 +116,12 @@ class CameraServiceImpl extends CameraService {
     }
   }
 
-  /// Start recording video
+  /// Set frame capture callback for ProofMode frame hashing
+  void setFrameCallback(void Function(CameraImage)? callback) {
+    _frameCallback = callback;
+  }
+
+  /// Start recording video with optional frame streaming for ProofMode
   @override
   Future<void> startRecording() async {
     if (!isInitialized) {
@@ -129,9 +137,24 @@ class CameraServiceImpl extends CameraService {
     try {
       if (Platform.isMacOS) {
         // Use recordVideo method for macOS
+        // NOTE: macOS camera_macos package doesn't support frame streaming during recording
+        Log.warning('Frame capture not available on macOS',
+          name: 'CameraService', category: LogCategory.system);
         await _macOSController!.recordVideo();
       } else {
-        await _controller!.startVideoRecording();
+        // Start video recording with optional frame streaming
+        if (_frameCallback != null) {
+          Log.info('Starting recording with frame capture enabled',
+            name: 'CameraService', category: LogCategory.system);
+          await _controller!.startVideoRecording(
+            onAvailable: (CameraImage image) {
+              // Call the frame callback asynchronously to avoid blocking recording
+              _frameCallback?.call(image);
+            },
+          );
+        } else {
+          await _controller!.startVideoRecording();
+        }
       }
 
       _isRecording = true;

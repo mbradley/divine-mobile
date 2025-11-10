@@ -9,7 +9,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/models/aspect_ratio.dart' as vine;
 import 'package:openvine/models/vine_draft.dart';
-import 'package:openvine/models/native_proof_data.dart';
 import 'package:openvine/providers/vine_recording_provider.dart';
 import 'package:openvine/services/proofmode_session_service.dart' show ProofManifest;
 import 'package:openvine/screens/vine_drafts_screen.dart';
@@ -578,9 +577,12 @@ class _UniversalCameraScreenPureState
                           // Preview widget positioned to fill the aspect ratio container
                           if (recordingState.isInitialized)
                             Positioned.fill(
+                              // CRITICAL: Use a key that changes when camera switches
+                              // Without this, the preview widget won't rebuild and freezes on the old camera frame
+                              key: ValueKey('preview_${recordingState.cameraSwitchCount}'),
                               child: Builder(
                                 builder: (context) {
-                                  Log.info('📸 Building camera preview widget',
+                                  Log.info('📸 Building camera preview widget (switchCount=${recordingState.cameraSwitchCount})',
                                       name: 'UniversalCameraScreenPure', category: LogCategory.system);
                                   return ref
                                       .read(vineRecordingProvider.notifier)

@@ -117,7 +117,7 @@ void main() {
             final uploadResult = BlossomUploadResult(
               success: true,
               videoId: 'real_test_video',
-              cdnUrl: 'https://cdn.example.com/real_test_video.mp4',
+              fallbackUrl: 'https://cdn.example.com/real_test_video.mp4',
             );
 
             Log.debug('✅ Upload result structure verified');
@@ -213,7 +213,7 @@ void main() {
       final mockUploadResult = BlossomUploadResult(
         success: true,
         videoId: 'integration_test_video',
-        cdnUrl: 'https://cdn.example.com/integration_test.mp4',
+        fallbackUrl: 'https://cdn.example.com/integration_test.mp4',
       );
 
       expect(mockUploadResult.success, isTrue);

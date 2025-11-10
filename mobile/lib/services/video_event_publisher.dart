@@ -189,7 +189,48 @@ class VideoEventPublisher {
 
       // Build imeta tag components
       final imetaComponents = <String>[];
-      imetaComponents.add('url ${upload.cdnUrl!}');
+
+      // Add all video URLs from Blossom upload stored in PendingUpload
+      // Priority order (based on _scoreVideoUrl in video_event.dart):
+      // 1. streamingMp4Url (BunnyStream MP4 - scores 110)
+      // 2. fallbackUrl (R2 MP4 - scores 100)
+      // 3. streamingHlsUrl (HLS - scores 90)
+
+      final urlsAdded = <String>[];
+
+      if (upload.streamingMp4Url != null && upload.streamingMp4Url!.isNotEmpty) {
+        imetaComponents.add('url ${upload.streamingMp4Url}');
+        urlsAdded.add('MP4(streaming): ${upload.streamingMp4Url}');
+      }
+
+      if (upload.fallbackUrl != null && upload.fallbackUrl!.isNotEmpty) {
+        imetaComponents.add('url ${upload.fallbackUrl}');
+        urlsAdded.add('MP4(R2 fallback): ${upload.fallbackUrl}');
+      }
+
+      if (upload.streamingHlsUrl != null && upload.streamingHlsUrl!.isNotEmpty) {
+        imetaComponents.add('url ${upload.streamingHlsUrl}');
+        urlsAdded.add('HLS: ${upload.streamingHlsUrl}');
+      }
+
+      // Fallback to legacy cdnUrl if no Blossom-specific URLs
+      if (urlsAdded.isEmpty && upload.cdnUrl != null && upload.cdnUrl!.isNotEmpty) {
+        imetaComponents.add('url ${upload.cdnUrl}');
+        urlsAdded.add('Legacy CDN: ${upload.cdnUrl}');
+      }
+
+      if (urlsAdded.isNotEmpty) {
+        Log.info(
+          '✅ Added video URLs to imeta:\n  ${urlsAdded.join("\n  ")}',
+          name: 'VideoEventPublisher',
+          category: LogCategory.video,
+        );
+      } else {
+        Log.error('❌ No video URLs available from upload',
+          name: 'VideoEventPublisher',
+          category: LogCategory.video);
+      }
+
       imetaComponents.add('m video/mp4');
 
       // Use uploaded thumbnail CDN URL from Blossom upload

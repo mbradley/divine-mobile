@@ -301,7 +301,28 @@ class ProofModeAttestationService {
       // Get GCP Project ID from config
       final gcpProjectId = await ProofModeConfig.gcpProjectId;
 
+      // If GCP Project ID is not configured (0), use fallback attestation
+      if (gcpProjectId == 0) {
+        Log.warning(
+            'GCP Project ID not configured, using fallback attestation. '
+            'Set GCP_PROJECT_ID environment variable for real Play Integrity attestation.',
+            name: 'ProofModeAttestationService',
+            category: LogCategory.auth);
+        return await _generateFallbackAttestation(challenge, deviceInfo);
+      }
+
+      // Check if device is physical (Play Integrity requires physical device or emulator with Play Services)
+      final isPhysicalDevice = deviceInfo.isPhysicalDevice ?? false;
+      if (!isPhysicalDevice) {
+        Log.info('Running on emulator/simulator, using fallback attestation',
+            name: 'ProofModeAttestationService', category: LogCategory.auth);
+        return await _generateFallbackAttestation(challenge, deviceInfo);
+      }
+
       // Use app_device_integrity plugin for real Play Integrity
+      Log.debug('Using Play Integrity API with GCP Project ID: $gcpProjectId',
+          name: 'ProofModeAttestationService', category: LogCategory.auth);
+
       final token = await _attestationPlugin.getAttestationServiceSupport(
         challengeString: challenge,
         gcp: gcpProjectId,
@@ -317,12 +338,17 @@ class ProofModeAttestationService {
         metadata: {
           'attestationType': 'play_integrity',
           'deviceInfo': deviceInfo.toJson(),
+          'gcpProjectId': gcpProjectId,
         },
       );
     } catch (e) {
       Log.error('Failed to generate Android Play Integrity attestation: $e',
           name: 'ProofModeAttestationService', category: LogCategory.auth);
-      rethrow;
+
+      // Fallback to mock attestation on error
+      Log.warning('Falling back to mock attestation due to Play Integrity error',
+          name: 'ProofModeAttestationService', category: LogCategory.auth);
+      return await _generateFallbackAttestation(challenge, deviceInfo);
     }
   }
 

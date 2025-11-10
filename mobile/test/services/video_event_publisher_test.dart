@@ -12,9 +12,33 @@ class ImetaTagGenerator {
   static Future<List<String>> generateImetaComponents(PendingUpload upload) async {
     final imetaComponents = <String>[];
 
-    // Add URL and MIME type
+    // Add URL(s) - handle Bunny Stream URLs specially
     if (upload.cdnUrl != null) {
-      imetaComponents.add('url ${upload.cdnUrl!}');
+      final cdnUrl = upload.cdnUrl!;
+
+      // Check if this is a Bunny Stream HLS playlist URL
+      // Format: https://stream.divine.video/{GUID}/playlist.m3u8
+      final bunnyStreamPattern = RegExp(
+        r'^https://stream\.divine\.video/([a-f0-9\-]+)/playlist\.m3u8$',
+        caseSensitive: false,
+      );
+
+      final match = bunnyStreamPattern.firstMatch(cdnUrl);
+      if (match != null) {
+        // Extract GUID and construct both MP4 and HLS URLs
+        final guid = match.group(1)!;
+        // Use 360p quality (next step up from 240p for better quality short videos)
+        final mp4Url = 'https://stream.divine.video/$guid/play_360p.mp4';
+
+        // Add MP4 URL FIRST (preferred for short videos - higher score in _scoreVideoUrl)
+        imetaComponents.add('url $mp4Url');
+
+        // Add HLS URL as fallback
+        imetaComponents.add('url $cdnUrl');
+      } else {
+        // Regular CDN URL - add as-is
+        imetaComponents.add('url $cdnUrl');
+      }
     }
     imetaComponents.add('m video/mp4');
 
@@ -234,6 +258,62 @@ void main() {
           reason: 'Should include dimensions when available');
       expect(imetaComponents.contains('dim 1280x720'), true,
           reason: 'Dimensions should be formatted correctly');
+    });
+
+    test('should add BOTH MP4 and HLS URLs when Blossom returns Bunny Stream HLS URL', () async {
+      // Arrange - Blossom server returns HLS playlist URL
+      final hlsUrl = 'https://stream.divine.video/fa4a90a3-6a30-4dc6-9b9d-3f78551c9053/playlist.m3u8';
+      final upload = PendingUpload.create(
+        localVideoPath: testVideoFile.path,
+        nostrPubkey: 'test_pubkey',
+        title: 'Test Video',
+      ).copyWith(
+        cdnUrl: hlsUrl,
+        status: UploadStatus.readyToPublish,
+      );
+
+      // Act
+      final imetaComponents = await ImetaTagGenerator.generateImetaComponents(upload);
+
+      // Assert - Should contain BOTH URLs
+      final mp4Url = 'https://stream.divine.video/fa4a90a3-6a30-4dc6-9b9d-3f78551c9053/play_360p.mp4';
+
+      // Should have MP4 URL FIRST (preferred for short videos)
+      expect(imetaComponents.contains('url $mp4Url'), true,
+          reason: 'Should include MP4 URL variant for Bunny Stream video');
+
+      // Should also have HLS URL as fallback
+      expect(imetaComponents.contains('url $hlsUrl'), true,
+          reason: 'Should include original HLS URL as fallback');
+
+      // MP4 should come before HLS (preferred)
+      final mp4Index = imetaComponents.indexOf('url $mp4Url');
+      final hlsIndex = imetaComponents.indexOf('url $hlsUrl');
+      expect(mp4Index, lessThan(hlsIndex),
+          reason: 'MP4 URL should come before HLS URL (preferred for short videos)');
+    });
+
+    test('should only add single URL for non-Bunny Stream CDN URLs', () async {
+      // Arrange - Regular CDN URL (not Bunny Stream)
+      final regularUrl = 'https://cdn.divine.video/abc123.mp4';
+      final upload = PendingUpload.create(
+        localVideoPath: testVideoFile.path,
+        nostrPubkey: 'test_pubkey',
+        title: 'Test Video',
+      ).copyWith(
+        cdnUrl: regularUrl,
+        status: UploadStatus.readyToPublish,
+      );
+
+      // Act
+      final imetaComponents = await ImetaTagGenerator.generateImetaComponents(upload);
+
+      // Assert - Should only have ONE URL
+      final urlComponents = imetaComponents.where((c) => c.startsWith('url ')).toList();
+      expect(urlComponents.length, equals(1),
+          reason: 'Should only have one URL for non-Bunny Stream CDNs');
+      expect(urlComponents.first, equals('url $regularUrl'),
+          reason: 'Should use original CDN URL');
     });
   });
 }

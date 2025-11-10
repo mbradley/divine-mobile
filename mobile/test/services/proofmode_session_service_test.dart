@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/proofmode_session_service.dart';
 import 'package:openvine/services/proofmode_key_service.dart';
 import 'package:openvine/services/proofmode_attestation_service.dart';
+import 'package:openvine/services/proofmode_sensor_collector.dart';
 import '../helpers/test_helpers.dart';
 import 'dart:typed_data';
 
@@ -13,6 +14,7 @@ void main() {
     late ProofModeSessionService sessionService;
     late TestProofModeKeyService testKeyService;
     late TestProofModeAttestationService testAttestationService;
+    late ProofModeSensorCollector testSensorCollector;
 
     setUpAll(() async {
       await setupTestEnvironment();
@@ -21,9 +23,14 @@ void main() {
     setUp(() async {
       testKeyService = TestProofModeKeyService();
       testAttestationService = TestProofModeAttestationService();
+      // Create sensor collector without initializing sensors (test environment)
+      testSensorCollector = ProofModeSensorCollector(initializeSensors: false);
 
-      sessionService =
-          ProofModeSessionService(testKeyService, testAttestationService);
+      sessionService = ProofModeSessionService(
+        testKeyService,
+        testAttestationService,
+        sensorCollector: testSensorCollector,
+      );
     });
 
     tearDown(() async {

@@ -88,9 +88,29 @@ class ProofModeConfig {
   ///
   /// Returns the configured GCP Project ID or 0 if not configured.
   /// This is used by ProofModeAttestationService for Android Play Integrity API.
+  ///
+  /// The GCP Project ID can be configured via:
+  /// 1. GCP_PROJECT_ID environment variable (preferred)
+  /// 2. Defaults to 0 (not configured)
   static Future<int> get gcpProjectId async {
-    // Default to 0 (not configured)
-    // TODO: Load from environment variable or secure config storage
-    return 0;
+    try {
+      // Try to load from environment variable
+      final envValue = const String.fromEnvironment('GCP_PROJECT_ID', defaultValue: '0');
+      final projectId = int.tryParse(envValue) ?? 0;
+
+      if (projectId > 0) {
+        Log.debug('Loaded GCP Project ID from environment: $projectId',
+            name: 'ProofModeConfig', category: LogCategory.system);
+      } else {
+        Log.debug('GCP Project ID not configured (using default: 0)',
+            name: 'ProofModeConfig', category: LogCategory.system);
+      }
+
+      return projectId;
+    } catch (e) {
+      Log.warning('Failed to load GCP Project ID: $e',
+          name: 'ProofModeConfig', category: LogCategory.system);
+      return 0;
+    }
   }
 }

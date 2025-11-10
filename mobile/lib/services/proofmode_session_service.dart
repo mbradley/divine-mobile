@@ -9,6 +9,7 @@ import 'package:crypto/crypto.dart';
 import 'package:openvine/services/proofmode_config.dart';
 import 'package:openvine/services/proofmode_key_service.dart';
 import 'package:openvine/services/proofmode_attestation_service.dart';
+import 'package:openvine/services/proofmode_sensor_collector.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 /// Recording segment within a vine session
@@ -204,8 +205,13 @@ class ProofManifest {
 class ProofModeSessionService {
   final ProofModeKeyService _keyService;
   final ProofModeAttestationService _attestationService;
+  final ProofModeSensorCollector _sensorCollector;
 
-  ProofModeSessionService(this._keyService, this._attestationService);
+  ProofModeSessionService(
+    this._keyService,
+    this._attestationService, {
+    ProofModeSensorCollector? sensorCollector,
+  }) : _sensorCollector = sensorCollector ?? ProofModeSensorCollector();
 
   ProofSession? _currentSession;
   Timer? _pauseMonitorTimer;
@@ -383,7 +389,11 @@ class ProofModeSessionService {
         name: 'ProofModeSessionService', category: LogCategory.system);
 
     final segmentId = _generateSegmentId(session.segments.length);
-    session.startRecordingSegment(segmentId);
+
+    // Collect initial sensor snapshot for this segment
+    final sensorSnapshot = await _sensorCollector.collectSensorSnapshot();
+
+    session.startRecordingSegment(segmentId, sensorSnapshot);
 
     // Stop pause monitoring if active
     _pauseMonitorTimer?.cancel();
@@ -549,24 +559,13 @@ class ProofModeSessionService {
   }
 
   void _startPauseMonitoring() {
-    _pauseMonitorTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    _pauseMonitorTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
       final session = _currentSession;
       if (session != null && !session.isRecording) {
-        session.updatePauseProof(_collectSensorData());
+        final sensorData = await _sensorCollector.collectSensorSnapshot();
+        session.updatePauseProof(sensorData);
       }
     });
-  }
-
-  Map<String, dynamic> _collectSensorData() {
-    // Mock sensor data collection
-    // In production, this would collect real sensor data
-    return {
-      'timestamp': DateTime.now().toIso8601String(),
-      'accelerometer': {'x': 0.1, 'y': 0.2, 'z': 9.8},
-      'gyroscope': {'x': 0.01, 'y': 0.02, 'z': 0.01},
-      'magnetometer': {'x': 45.0, 'y': 12.0, 'z': -30.0},
-      'light': 150.0,
-    };
   }
 }
 
@@ -596,6 +595,7 @@ class ProofSession {
   DateTime? _currentSegmentStart;
   List<String> _currentFrameHashes = [];
   List<DateTime> _currentFrameTimestamps = [];
+  Map<String, dynamic>? _currentSensorData;
 
   PauseProof? _currentPauseProof;
   DateTime? _currentPauseStart;
@@ -616,10 +616,11 @@ class ProofSession {
     return allHashes;
   }
 
-  void startRecordingSegment(String segmentId) {
+  void startRecordingSegment(String segmentId, Map<String, dynamic> initialSensorData) {
     _currentSegmentStart = DateTime.now();
     _currentFrameHashes = [];
     _currentFrameTimestamps = [];
+    _currentSensorData = initialSensorData;
     _frameCounter = 0;
     // Set current segment to indicate recording is active
     _currentSegment = RecordingSegment(
@@ -627,6 +628,7 @@ class ProofSession {
       startTime: _currentSegmentStart!,
       endTime: _currentSegmentStart!, // Will be updated on stop
       frameHashes: [],
+      sensorData: initialSensorData,
     );
 
     // End current pause proof if active
@@ -651,6 +653,7 @@ class ProofSession {
       endTime: DateTime.now(),
       frameHashes: List.from(_currentFrameHashes),
       frameTimestamps: List.from(_currentFrameTimestamps),
+      sensorData: _currentSensorData,
     );
 
     segments.add(segment);
@@ -658,6 +661,7 @@ class ProofSession {
     _currentSegmentStart = null;
     _currentFrameHashes = [];
     _currentFrameTimestamps = [];
+    _currentSensorData = null;
 
     // Start new pause proof
     _currentPauseStart = DateTime.now();

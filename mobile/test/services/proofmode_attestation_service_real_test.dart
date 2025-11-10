@@ -244,14 +244,15 @@ void main() {
     });
 
     group('Real Attestation Error Handling', () {
-      test('handles missing crypto flag gracefully', () async {
+      test('generates attestation when crypto is enabled', () async {
         await attestationService.initialize();
 
         final challenge = 'error-test-${DateTime.now().millisecondsSinceEpoch}';
         final attestation = await attestationService.generateAttestation(challenge);
 
-        // Should return null when crypto disabled
-        expect(attestation, isNull);
+        // ProofMode crypto is always enabled, so should generate attestation
+        expect(attestation, isNotNull);
+        expect(attestation, isA<DeviceAttestation>());
       });
 
       test('handles invalid challenge gracefully', () async {

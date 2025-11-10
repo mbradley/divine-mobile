@@ -1460,7 +1460,10 @@ class UploadManager {
           result.videoId as String?, // Use videoId for existing systems
       videoId:
           result.videoId as String?, // Store videoId for new publishing system
-      cdnUrl: result.cdnUrl as String?, // Store CDN URL directly
+      cdnUrl: result.cdnUrl as String?, // Store CDN URL directly (fallbackUrl ?? url via getter)
+      streamingMp4Url: result.streamingMp4Url, // Store BunnyStream MP4 URL
+      streamingHlsUrl: result.streamingHlsUrl, // Store BunnyStream HLS URL
+      fallbackUrl: result.fallbackUrl, // Store R2 fallback MP4 URL
       thumbnailPath: thumbnailUrl, // Store thumbnail URL
       uploadProgress: (isProcessing && !skipProcessing) ? 0.9 : 1.0, // Skip processing = 100% ready
       completedAt: (isProcessing && !skipProcessing) ? null : DateTime.now(), // Mark as completed if skipping processing

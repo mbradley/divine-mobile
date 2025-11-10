@@ -43,6 +43,7 @@ class VineRecordingUIState {
     required this.isCameraInitialized,
     required this.canSwitchCamera,
     required this.aspectRatio,
+    this.cameraSwitchCount = 0,
   });
 
   final VineRecordingState recordingState;
@@ -54,6 +55,7 @@ class VineRecordingUIState {
   final bool isCameraInitialized;
   final bool canSwitchCamera;
   final model.AspectRatio aspectRatio;
+  final int cameraSwitchCount; // Increments each time camera switches to force UI rebuild
 
   // Convenience getters used by UI
   bool get isRecording => recordingState == VineRecordingState.recording;
@@ -73,6 +75,7 @@ class VineRecordingUIState {
     bool? isCameraInitialized,
     bool? canSwitchCamera,
     model.AspectRatio? aspectRatio,
+    int? cameraSwitchCount,
   }) {
     return VineRecordingUIState(
       recordingState: recordingState ?? this.recordingState,
@@ -85,6 +88,7 @@ class VineRecordingUIState {
       isCameraInitialized: isCameraInitialized ?? this.isCameraInitialized,
       canSwitchCamera: canSwitchCamera ?? this.canSwitchCamera,
       aspectRatio: aspectRatio ?? this.aspectRatio,
+      cameraSwitchCount: cameraSwitchCount ?? this.cameraSwitchCount,
     );
   }
 }
@@ -138,6 +142,7 @@ class VineRecordingNotifier extends StateNotifier<VineRecordingUIState> {
       isCameraInitialized: _controller.isCameraInitialized,
       canSwitchCamera: _controller.canSwitchCamera,
       aspectRatio: _controller.aspectRatio,
+      cameraSwitchCount: state.cameraSwitchCount, // CRITICAL: Preserve camera switch count
     );
   }
 
@@ -221,6 +226,10 @@ class VineRecordingNotifier extends StateNotifier<VineRecordingUIState> {
     await _controller.switchCamera();
 
     // Force state update to rebuild UI with new camera preview
+    // Increment camera switch count to ensure state object changes and triggers UI rebuild
+    state = state.copyWith(
+      cameraSwitchCount: state.cameraSwitchCount + 1,
+    );
     updateState();
   }
 

@@ -63,6 +63,9 @@ class PendingUpload {
     this.videoHeight,
     this.videoDurationMillis,
     this.proofManifestJson,
+    this.streamingMp4Url,
+    this.streamingHlsUrl,
+    this.fallbackUrl,
   });
 
   /// Create a new pending upload
@@ -156,6 +159,15 @@ class PendingUpload {
   @HiveField(20)
   final String? proofManifestJson; // Serialized ProofManifest
 
+  @HiveField(21)
+  final String? streamingMp4Url; // BunnyStream MP4 URL from Blossom
+
+  @HiveField(22)
+  final String? streamingHlsUrl; // BunnyStream HLS URL from Blossom
+
+  @HiveField(23)
+  final String? fallbackUrl; // R2 MP4 fallback URL from Blossom
+
   /// Get video duration as Duration object
   Duration? get videoDuration => videoDurationMillis != null
       ? Duration(milliseconds: videoDurationMillis!)
@@ -224,6 +236,9 @@ class PendingUpload {
     int? videoHeight,
     Duration? videoDuration,
     String? proofManifestJson,
+    String? streamingMp4Url,
+    String? streamingHlsUrl,
+    String? fallbackUrl,
   }) =>
       PendingUpload(
         id: id ?? this.id,
@@ -248,6 +263,9 @@ class PendingUpload {
         videoDurationMillis:
             (videoDuration ?? this.videoDuration)?.inMilliseconds,
         proofManifestJson: proofManifestJson ?? this.proofManifestJson,
+        streamingMp4Url: streamingMp4Url ?? this.streamingMp4Url,
+        streamingHlsUrl: streamingHlsUrl ?? this.streamingHlsUrl,
+        fallbackUrl: fallbackUrl ?? this.fallbackUrl,
       );
 
   /// Check if the upload is in a terminal state

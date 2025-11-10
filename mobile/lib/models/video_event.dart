@@ -6,6 +6,7 @@ import 'dart:developer' as developer;
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/services/thumbnail_api_service.dart';
 import 'package:openvine/constants/nip71_migration.dart';
+import 'package:openvine/services/m3u8_resolver_service.dart';
 
 /// Represents a video event (NIP-71 compliant kinds 22, 34236)
 class VideoEvent {
@@ -1076,6 +1077,54 @@ class VideoEvent {
           name: 'VideoEvent');
       return null;
     }
+  }
+
+  /// Resolve m3u8 URLs to direct MP4 URLs for better playback
+  ///
+  /// For short videos, HLS adaptive streaming is overkill. This method:
+  /// 1. Checks if videoUrl is an m3u8 playlist
+  /// 2. If so, fetches and parses the playlist
+  /// 3. Returns the lowest bandwidth MP4 variant
+  /// 4. Otherwise returns the original videoUrl
+  ///
+  /// Returns the best playable URL (either resolved MP4 or original URL)
+  /// Returns null if resolution fails
+  static Future<String?> resolvePlayableUrl(String? videoUrl) async {
+    if (videoUrl == null || videoUrl.isEmpty) {
+      return null;
+    }
+
+    // Check if this is an m3u8 URL
+    final urlLower = videoUrl.toLowerCase();
+    if (!urlLower.contains('.m3u8') && !urlLower.contains('/hls/')) {
+      // Not an m3u8 URL, return as-is
+      return videoUrl;
+    }
+
+    developer.log('🎬 Attempting to resolve m3u8 URL to MP4: $videoUrl',
+        name: 'VideoEvent');
+
+    // Try to resolve to MP4
+    final resolver = M3u8ResolverService();
+    final resolvedUrl = await resolver.resolveM3u8ToMp4(videoUrl);
+
+    if (resolvedUrl != null) {
+      developer.log('✅ Resolved m3u8 to MP4: $resolvedUrl',
+          name: 'VideoEvent');
+      return resolvedUrl;
+    } else {
+      developer.log('⚠️ Failed to resolve m3u8, using original URL: $videoUrl',
+          name: 'VideoEvent');
+      return videoUrl; // Fallback to original if resolution fails
+    }
+  }
+
+  /// Get the best playable URL for this video
+  ///
+  /// This is an async convenience method that resolves m3u8 URLs to MP4.
+  /// Use this when preparing to play a video.
+  Future<String?> getPlayableUrl() async {
+    return resolvePlayableUrl(videoUrl);
   }
 }
 
