@@ -45,14 +45,13 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
             ),
           ),
           child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 600),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  child: Column(
+                    children: [
                 // No top margin on phones, keep margin on tablets
                 SizedBox(height: MediaQuery.of(context).size.width < 600 ? 0 : 40),
                 // App branding - Divine icon (responsive sizing)
@@ -61,16 +60,11 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                   height: MediaQuery.of(context).size.width < 600 ? 224 : 320,
                   fit: BoxFit.contain,
                 ),
-                // No spacing on phones, keep spacing on tablets
-                if (MediaQuery.of(context).size.width >= 600)
-                  const SizedBox(height: 0),
-                Text(
-                  'Divine',
-                  style: GoogleFonts.pacifico(
-                    fontSize: MediaQuery.of(context).size.width < 600 ? 48 : 64,
-                    color: const Color(0xFFF5F6EA),
-                  ),
-                  textAlign: TextAlign.center,
+                // Wordmark logo - positioned close to icon above
+                Image.asset(
+                  'assets/icon/White cropped.png',
+                  width: MediaQuery.of(context).size.width < 600 ? 130 : 182,
+                  fit: BoxFit.contain,
                 ),
                 const SizedBox(height: 16),
                 const Text(
@@ -81,7 +75,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 40),
+
+                // Spacer pushes content below to the bottom
+                const Spacer(),
 
                 // Age verification and TOS acceptance
                 _buildCheckboxSection(),
@@ -107,8 +103,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
                         foregroundColor: VineTheme.vineGreen,
-                        disabledBackgroundColor: Colors.white.withValues(alpha: 0.5),
-                        disabledForegroundColor: VineTheme.vineGreen.withValues(alpha: 0.5),
+                        disabledBackgroundColor: Colors.white.withValues(alpha: 0.7),
+                        disabledForegroundColor: VineTheme.vineGreen.withValues(alpha: 0.7),
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -123,9 +119,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                                 strokeWidth: 2,
                               ),
                             )
-                          : const Text(
-                              'Continue',
-                              style: TextStyle(
+                          : Text(
+                              _canProceed ? 'Continue' : 'Accept Terms to Continue',
+                              style: const TextStyle(
                                   fontSize: 18, fontWeight: FontWeight.w600),
                             ),
                     ),
@@ -176,61 +172,18 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                       ],
                     ),
                   ),
-                const SizedBox(height: 32),
-
-                // Educational content
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[900],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    children: [
-                      const Icon(
-                        Icons.info_outline,
-                        color: VineTheme.vineGreen,
-                        size: 24,
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'What is Divine?',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Divine brings back 6-second looping videos, recovered from the internet archive and created by humans.',
-                        style: TextStyle(
-                          color: Colors.grey[300],
-                          fontSize: 14,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 40),
-              ],
-            ),
-          ),
+                ],
+              ),
             ),
           ),
         ),
-        ),
-      );
+      ),
+    ),
+  );
   }
 
   Widget _buildCheckboxSection() => Container(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: VineTheme.cardBackground,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey[800]!),
-        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -246,7 +199,14 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                       value: _isOver16,
                       onChanged: (value) =>
                           setState(() => _isOver16 = value ?? false),
-                      activeColor: VineTheme.vineGreen,
+                      fillColor: WidgetStateProperty.resolveWith((states) {
+                        if (states.contains(WidgetState.selected)) {
+                          return Colors.white;
+                        }
+                        return Colors.transparent;
+                      }),
+                      checkColor: VineTheme.vineGreen,
+                      side: const BorderSide(color: Colors.white, width: 2),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -277,7 +237,14 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                       value: _agreedToTerms,
                       onChanged: (value) =>
                           setState(() => _agreedToTerms = value ?? false),
-                      activeColor: VineTheme.vineGreen,
+                      fillColor: WidgetStateProperty.resolveWith((states) {
+                        if (states.contains(WidgetState.selected)) {
+                          return Colors.white;
+                        }
+                        return Colors.transparent;
+                      }),
+                      checkColor: VineTheme.vineGreen,
+                      side: const BorderSide(color: Colors.white, width: 2),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -293,7 +260,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                           TextSpan(
                             text: 'Terms of Service',
                             style: const TextStyle(
-                              color: VineTheme.vineGreen,
+                              color: Colors.white,
                               decoration: TextDecoration.underline,
                             ),
                             recognizer: TapGestureRecognizer()
@@ -303,7 +270,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                           TextSpan(
                             text: 'Privacy Policy',
                             style: const TextStyle(
-                              color: VineTheme.vineGreen,
+                              color: Colors.white,
                               decoration: TextDecoration.underline,
                             ),
                             recognizer: TapGestureRecognizer()
@@ -314,7 +281,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                           TextSpan(
                             text: 'Safety Standards',
                             style: const TextStyle(
-                              color: VineTheme.vineGreen,
+                              color: Colors.white,
                               decoration: TextDecoration.underline,
                             ),
                             recognizer: TapGestureRecognizer()
