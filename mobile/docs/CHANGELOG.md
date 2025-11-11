@@ -7,6 +7,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Seed Data Preloading (2025-11-11)
+
+#### Features
+- **Added seed data preloading for first-launch experience** - New users see popular videos immediately
+  - Pre-bundled SQL seed events database with 50 popular videos
+  - Pre-downloaded media files (videos + thumbnails) bundled in app
+  - Automatic import on first launch when no events exist in local database
+  - Seamless integration with existing NostrEventsDao and video playback
+  - Generated from real relay data using `scripts/generate_seed_data.dart`
+
+#### Technical Details
+- Created `lib/services/seed_data_preload_service.dart`:
+  - Detects first-launch condition via event count check
+  - Imports seed events SQL file into SQLite database
+  - Verifies media file availability for each video
+  - Only runs once per installation
+  - Non-blocking background initialization
+- Created `scripts/generate_seed_data.dart`:
+  - Fetches top 50 videos by loop count from relay
+  - Downloads all media files (videos + thumbnails) to local bundle
+  - Generates SQL INSERT statements for seed database
+  - Creates manifest.json for media file tracking
+- Added bundled assets in `assets/seed_data/` and `assets/seed_media/`
+- Modified `pubspec.yaml`: Added seed data assets
+- Modified `lib/main.dart`: Integrated preload service into app startup
+
+#### User Experience
+- New users see engaging content immediately instead of empty state
+- No network request required for initial video viewing
+- Smooth transition to live relay content as user browses
+- Videos play instantly with bundled media files
+
+### Fixed - UI Design Consistency (2025-11-11)
+
+#### Bug Fixes
+- **Merged upstream UI/UX improvements** - Applied design fixes from remote main branch
+  - Updated icon assets (White cropped.png, White on transparent.png)
+  - Added user-avatar.png placeholder for default profile images
+  - Updated iOS launch screen images and storyboard
+  - Improved widget styling in multiple screens (follow actions, user profile, drawer)
+  - Router improvements for better navigation state management
+  - Settings screen layout enhancements
+
+#### Technical Details
+- Merged 21 commits from origin/main into feature branch
+- Resolved merge conflict in pubspec.yaml by keeping both seed data and design assets
+- Updated files:
+  - Navigation: `lib/router/app_router.dart`, `lib/router/app_shell.dart`, `lib/router/route_utils.dart`
+  - Screens: `lib/screens/*_screen.dart` (blossom, explore, notifications, profile, relay, settings, drafts)
+  - Widgets: `lib/widgets/user_avatar.dart`, `lib/widgets/proofmode_badge_row.dart`, `lib/widgets/vine_drawer.dart`
+  - Assets: iOS launch images, app icons
+
 ### Added - Account Deletion (2025-11-10)
 
 #### Features
