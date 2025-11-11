@@ -133,7 +133,7 @@ class _VineDraftsScreenState extends ConsumerState<VineDraftsScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Your saved Vine drafts will appear here',
+              'Your saved video drafts will appear here',
               style: TextStyle(
                 color: Colors.grey[400],
                 fontSize: 16,
@@ -143,7 +143,7 @@ class _VineDraftsScreenState extends ConsumerState<VineDraftsScreen> {
             ElevatedButton.icon(
               onPressed: () => Navigator.of(context).pop(),
               icon: const Icon(Icons.videocam),
-              label: const Text('Record a Vine'),
+              label: const Text('Record a Video'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: VineTheme.vineGreen,
                 foregroundColor: VineTheme.whiteText,
