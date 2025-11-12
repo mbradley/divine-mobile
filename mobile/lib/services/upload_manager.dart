@@ -14,7 +14,7 @@ import 'package:openvine/models/vine_draft.dart';
 import 'package:openvine/services/circuit_breaker_service.dart';
 import 'package:openvine/services/blossom_upload_service.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
-import 'package:openvine/services/proofmode_session_service.dart' show ProofManifest;
+import 'package:openvine/models/native_proof_data.dart';
 import 'package:openvine/services/upload_initialization_helper.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:openvine/utils/async_utils.dart';
@@ -250,7 +250,7 @@ class UploadManager {
         name: 'UploadManager', category: LogCategory.video);
 
     if (draft.hasProofMode) {
-      Log.info('📜 ProofManifest JSON length: ${draft.proofManifestJson?.length ?? 0} characters',
+      Log.info('📜 Native ProofMode JSON length: ${draft.proofManifestJson?.length ?? 0} characters',
           name: 'UploadManager', category: LogCategory.video);
     }
 
@@ -276,20 +276,20 @@ class UploadManager {
     int? videoWidth,
     int? videoHeight,
     Duration? videoDuration,
-    ProofManifest? proofManifest,
+    NativeProofData? nativeProof,
   }) async {
     Log.warning('⚠️ Using legacy startUpload() - prefer startUploadFromDraft()',
         name: 'UploadManager', category: LogCategory.video);
 
-    // Convert ProofManifest to JSON if present
+    // Convert NativeProofData to JSON if present
     String? proofManifestJson;
-    if (proofManifest != null) {
+    if (nativeProof != null) {
       try {
-        proofManifestJson = jsonEncode(proofManifest.toJson());
-        Log.info('📜 ProofManifest attached to upload (${proofManifest.segments.length} segments)',
+        proofManifestJson = jsonEncode(nativeProof.toJson());
+        Log.info('📜 Native ProofMode data attached to upload',
             name: 'UploadManager', category: LogCategory.video);
       } catch (e) {
-        Log.error('Failed to serialize ProofManifest: $e',
+        Log.error('Failed to serialize NativeProofData: $e',
             name: 'UploadManager', category: LogCategory.system);
       }
     }
@@ -382,10 +382,10 @@ class UploadManager {
 
     // Log ProofMode status
     if (proofManifestJson != null && proofManifestJson.isNotEmpty) {
-      Log.info('📜 ProofManifest attached to upload (${proofManifestJson.length} characters)',
+      Log.info('📜 Native ProofMode data attached to upload (${proofManifestJson.length} characters)',
           name: 'UploadManager', category: LogCategory.video);
     } else {
-      Log.info('📜 No ProofManifest provided to upload',
+      Log.info('📜 No native ProofMode data provided to upload',
           name: 'UploadManager', category: LogCategory.video);
     }
 
