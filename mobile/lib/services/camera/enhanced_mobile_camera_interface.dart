@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
 import 'package:openvine/services/vine_recording_controller.dart';
 import 'package:openvine/utils/unified_logger.dart';
@@ -76,6 +77,11 @@ class EnhancedMobileCameraInterface extends CameraPlatformInterface {
 
       await _controller!.initialize();
       Log.info('Camera controller initialized successfully',
+          name: 'EnhancedMobileCamera', category: LogCategory.system);
+
+      // Lock camera orientation to portrait up to prevent preview rotation
+      await _controller!.lockCaptureOrientation(DeviceOrientation.portraitUp);
+      Log.info('Camera orientation locked to portrait up',
           name: 'EnhancedMobileCamera', category: LogCategory.system);
 
       await _controller!.prepareForVideoRecording();
@@ -438,6 +444,19 @@ class _EnhancedCameraPreviewState extends State<EnhancedCameraPreview> {
 
   @override
   Widget build(BuildContext context) {
+    // Debug: Log camera preview rebuild and orientation
+    final mediaQueryOrientation = MediaQuery.of(context).orientation;
+    final cameraValue = widget.controller.value;
+    Log.warning(
+      '📹 [CAMERA PREVIEW] Building camera preview - MediaQuery: $mediaQueryOrientation, '
+      'Camera initialized: ${cameraValue.isInitialized}, '
+      'Preview size: ${cameraValue.previewSize}, '
+      'Device orientation: ${cameraValue.deviceOrientation}, '
+      'Locked capture orientation: ${cameraValue.lockedCaptureOrientation}',
+      name: 'EnhancedCameraPreview',
+      category: LogCategory.system,
+    );
+
     return Stack(
       children: [
         // Camera preview
