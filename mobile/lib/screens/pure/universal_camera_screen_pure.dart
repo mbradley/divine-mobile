@@ -523,13 +523,22 @@ class _UniversalCameraScreenPureState
           }
 
           return Stack(
+            fit: StackFit.expand,
             children: [
-              // Camera preview at natural aspect ratio (cropping applied during encoding)
-              // Wrapped in GestureDetector for tap-anywhere-to-record (Vine-style UX)
+              // Camera preview - full screen without extra wrappers
+              if (recordingState.isInitialized)
+                Container(
+                  key: ValueKey('preview_${recordingState.cameraSwitchCount}'),
+                  child: ref.read(vineRecordingProvider.notifier).previewWidget,
+                )
+              else
+                CameraPreviewPlaceholder(
+                  isRecording: recordingState.isRecording,
+                ),
+
+              // Tap-anywhere-to-record gesture detector
               Positioned.fill(
                 child: GestureDetector(
-                  // Only enable tap-anywhere recording on mobile (not web)
-                  // Web uses single tap to toggle recording
                   onTapDown: !kIsWeb && recordingState.canRecord
                       ? (_) => _startRecording()
                       : null,
@@ -539,51 +548,10 @@ class _UniversalCameraScreenPureState
                   onTapCancel: !kIsWeb && recordingState.isRecording
                       ? () => _stopRecording()
                       : null,
-                  // Allow gestures to pass through to children (camera controls, zoom, etc.)
                   behavior: HitTestBehavior.translucent,
-                  child: Align(
-                    alignment: Alignment.topCenter,
-                    child: ClipRect(
-                      child: Stack(
-                        children: [
-                            // Camera preview at natural aspect ratio
-                            if (recordingState.isInitialized)
-                              // CRITICAL: Use a key that changes when camera switches
-                              // Without this, the preview widget won't rebuild and freezes on the old camera frame
-                              Container(
-                                key: ValueKey('preview_${recordingState.cameraSwitchCount}'),
-                                child: ref
-                                    .read(vineRecordingProvider.notifier)
-                                    .previewWidget,
-                              )
-                            else
-                              CameraPreviewPlaceholder(
-                                isRecording: recordingState.isRecording,
-                              ),
-
-                            // Zoom and gesture controls overlay
-                            if (recordingState.isInitialized)
-                              Consumer(
-                                builder: (context, ref, child) {
-                                  final cameraInterface = ref
-                                      .read(vineRecordingProvider.notifier)
-                                      .cameraInterface;
-                                  if (cameraInterface != null) {
-                                    return CameraControlsOverlay(
-                                      cameraInterface: cameraInterface,
-                                      recordingState:
-                                          recordingState.recordingState,
-                                    );
-                                  }
-                                  return const SizedBox.shrink();
-                                },
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
+                  child: const SizedBox.expand(),
                 ),
+              ),
 
               // Square crop mask overlay (only shown in square mode)
               // Positioned OUTSIDE ClipRect so it's not clipped away
