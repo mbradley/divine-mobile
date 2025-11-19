@@ -113,26 +113,22 @@ class _VineCameraScreenState extends State<VineCameraScreen> {
       // Set initial flash mode
       await _controller!.setFlashMode(_flashMode);
 
-      if (!mounted) {
-        Log.warning('📹 Widget unmounted during setFlashMode(), disposing controller',
-            name: 'VineCameraScreen', category: LogCategory.system);
-        _controller?.dispose();
-        return;
-      }
-
-      Log.info('📹 Preparing for video recording (warm-up)...',
-          name: 'VineCameraScreen', category: LogCategory.system);
-
-      // CRITICAL: Prepare for video recording to eliminate 5+ second delay on first recording
-      // This warms up the recording pipeline on iOS
-      await _controller!.prepareForVideoRecording();
-
       if (mounted) {
         setState(() {
           _isInitialized = true;
         });
-        Log.info('📹 ✅ Camera initialization complete with recording pipeline ready!',
+        Log.info('📹 ✅ Camera initialization complete!',
             name: 'VineCameraScreen', category: LogCategory.system);
+
+        // Start warming up recording pipeline in background (don't await - fire and forget)
+        // This runs asynchronously so it doesn't block the UI, but may help reduce first recording delay
+        _controller!.prepareForVideoRecording().then((_) {
+          Log.info('📹 Recording pipeline warm-up complete',
+              name: 'VineCameraScreen', category: LogCategory.system);
+        }).catchError((e) {
+          Log.warning('📹 Recording pipeline warm-up failed (non-critical): $e',
+              name: 'VineCameraScreen', category: LogCategory.system);
+        });
       } else {
         Log.warning('📹 Widget unmounted after initialization, disposing controller',
             name: 'VineCameraScreen', category: LogCategory.system);
@@ -418,25 +414,21 @@ class _VineCameraScreenState extends State<VineCameraScreen> {
 
       await _controller!.setFlashMode(_flashMode);
 
-      if (!mounted) {
-        Log.warning('📹 Widget unmounted during setFlashMode',
-            name: 'VineCameraScreen', category: LogCategory.system);
-        _controller?.dispose();
-        return;
-      }
-
-      Log.info('📹 Preparing new camera for video recording...',
-          name: 'VineCameraScreen', category: LogCategory.system);
-
-      // Prepare recording pipeline on the new camera to avoid delay on first recording
-      await _controller!.prepareForVideoRecording();
-
       if (mounted) {
         setState(() {
           _isSwitchingCamera = false;
         });
-        Log.info('📹 ✅ Camera switch complete with recording pipeline ready!',
+        Log.info('📹 ✅ Camera switch complete!',
             name: 'VineCameraScreen', category: LogCategory.system);
+
+        // Warm up recording pipeline in background (non-blocking)
+        _controller!.prepareForVideoRecording().then((_) {
+          Log.info('📹 Recording pipeline warm-up complete after camera switch',
+              name: 'VineCameraScreen', category: LogCategory.system);
+        }).catchError((e) {
+          Log.warning('📹 Recording pipeline warm-up failed (non-critical): $e',
+              name: 'VineCameraScreen', category: LogCategory.system);
+        });
       }
     } catch (e, stackTrace) {
       Log.error('📹 ❌ Failed to switch camera: $e',
