@@ -25,6 +25,8 @@ import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/widgets/macos_camera_preview.dart'
     show CameraPreviewPlaceholder;
 import 'package:openvine/widgets/camera_controls_overlay.dart';
+import 'package:openvine/widgets/dynamic_zoom_selector.dart';
+import 'package:openvine/services/camera/camerawesome_mobile_camera_interface.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -528,6 +530,15 @@ class _UniversalCameraScreenPureState
                   },
                 ),
 
+              // Dynamic zoom selector (above recording controls)
+              if (recordingState.isInitialized && !recordingState.isRecording)
+                Positioned(
+                  bottom: 180,
+                  left: 0,
+                  right: 0,
+                  child: _buildZoomSelector(),
+                ),
+
               // Recording controls overlay (bottom)
               Positioned(
                 bottom: 0,
@@ -914,6 +925,21 @@ class _UniversalCameraScreenPureState
               },
       ),
     );
+  }
+
+  /// Build dynamic zoom selector if using CamerAwesome
+  Widget _buildZoomSelector() {
+    final cameraInterface = ref.read(vineRecordingProvider.notifier).getCameraInterface();
+
+    // Only show zoom selector for CamerAwesome interface (iOS)
+    if (cameraInterface is CamerAwesomeMobileCameraInterface) {
+      return DynamicZoomSelector(
+        cameraInterface: cameraInterface,
+      );
+    }
+
+    // No zoom selector for other camera interfaces
+    return const SizedBox.shrink();
   }
 
   /// Build square crop mask overlay centered on screen

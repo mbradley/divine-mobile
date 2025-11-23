@@ -411,6 +411,7 @@ class VineRecordingNotifier extends StateNotifier<VineRecordingUIState> {
 
   // Getters that delegate to controller
   VineRecordingController get controller => _controller;
+  CameraPlatformInterface? getCameraInterface() => _controller.cameraInterface;
 }
 
 /// Provider for VineRecordingController with reactive state management

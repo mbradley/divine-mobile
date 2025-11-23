@@ -15,6 +15,7 @@ import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:openvine/models/aspect_ratio.dart' as model;
 import 'package:openvine/services/camera/native_macos_camera.dart';
 import 'package:openvine/services/camera/enhanced_mobile_camera_interface.dart';
+import 'package:openvine/services/camera/camerawesome_mobile_camera_interface.dart';
 import 'package:openvine/services/web_camera_service_stub.dart'
     if (dart.library.html) 'web_camera_service.dart' as camera_service;
 import 'package:openvine/services/native_proofmode_service.dart';
@@ -1073,27 +1074,26 @@ class VineRecordingController {
       } else if (Platform.isMacOS) {
         _cameraInterface = MacOSCameraInterface();
       } else if (Platform.isIOS || Platform.isAndroid) {
-        // Use basic camera for iOS due to performance issues with enhanced camera
-        // Enhanced camera causes dark/slow preview on iOS devices
+        // Use CamerAwesome for iOS with physical sensor switching support
         if (Platform.isIOS) {
-          _cameraInterface = MobileCameraInterface();
+          _cameraInterface = CamerAwesomeMobileCameraInterface();
           await _cameraInterface!.initialize();
-          Log.info('Using basic mobile camera for iOS (performance optimization)',
+          Log.info('Using CamerAwesome camera with physical sensor switching',
               name: 'VineRecordingController', category: LogCategory.system);
         } else {
-          // Try enhanced mobile camera interface first for Android, fallback to basic if it fails
+          // Android: Try CamerAwesome, fallback to enhanced camera if needed
           try {
-            _cameraInterface = EnhancedMobileCameraInterface();
+            _cameraInterface = CamerAwesomeMobileCameraInterface();
             await _cameraInterface!.initialize();
-            Log.info('Using enhanced mobile camera with zoom and focus features',
+            Log.info('Using CamerAwesome camera for Android',
                 name: 'VineRecordingController', category: LogCategory.system);
-          } catch (enhancedError) {
-            Log.warning('Enhanced camera failed, falling back to basic camera: $enhancedError',
+          } catch (cameraAwesomeError) {
+            Log.warning('CamerAwesome failed, falling back to enhanced camera: $cameraAwesomeError',
                 name: 'VineRecordingController', category: LogCategory.system);
             _cameraInterface?.dispose();
-            _cameraInterface = MobileCameraInterface();
+            _cameraInterface = EnhancedMobileCameraInterface();
             await _cameraInterface!.initialize();
-            Log.info('Using basic mobile camera interface as fallback',
+            Log.info('Using enhanced mobile camera interface as fallback',
                 name: 'VineRecordingController', category: LogCategory.system);
           }
         }
