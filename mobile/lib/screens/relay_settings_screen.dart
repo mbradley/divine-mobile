@@ -265,11 +265,8 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
       final nostrService = ref.read(nostrServiceProvider);
       await nostrService.removeRelay(relayUrl);
 
-      // Force UI refresh by invalidating the provider and calling setState
-      ref.invalidate(nostrServiceProvider);
-
       if (mounted) {
-        setState(() {}); // Force immediate rebuild
+        setState(() {});
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -428,11 +425,8 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
       final success = await nostrService.addRelay(relayUrl);
 
       if (success) {
-        // Force UI refresh by invalidating the provider and calling setState
-        ref.invalidate(nostrServiceProvider);
-
         if (mounted) {
-          setState(() {}); // Force immediate rebuild
+          setState(() {});
 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -461,8 +455,6 @@ class _RelaySettingsScreenState extends ConsumerState<RelaySettingsScreen> {
       final success = await nostrService.addRelay(defaultRelay);
 
       if (success) {
-        ref.invalidate(nostrServiceProvider);
-
         if (mounted) {
           setState(() {});
 
