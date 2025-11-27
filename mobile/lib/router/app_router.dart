@@ -124,7 +124,8 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       final prefs = await SharedPreferences.getInstance();
 
       // Check TOS acceptance first (before any other routes except /welcome)
-      if (!location.startsWith('/welcome')) {
+      if (!location.startsWith('/welcome') &&
+          !location.startsWith('/import-key')) {
         final hasAcceptedTerms = prefs.getBool('age_verified_16_plus') ?? false;
 
         if (!hasAcceptedTerms) {
