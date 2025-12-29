@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/overlay_visibility_provider.dart';
 import 'package:openvine/providers/developer_mode_tap_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/theme/vine_theme.dart';
@@ -24,11 +25,26 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   String _appVersion = '';
+  // Store notifier reference to safely call in deactivate
+  OverlayVisibility? _overlayNotifier;
 
   @override
   void initState() {
     super.initState();
     _loadAppVersion();
+    // Mark settings as open to pause video playback
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _overlayNotifier = ref.read(overlayVisibilityProvider.notifier);
+      _overlayNotifier?.setSettingsOpen(true);
+    });
+  }
+
+  @override
+  void dispose() {
+    // Mark settings as closed when leaving
+    // Use cached notifier reference since ref is invalid during dispose
+    _overlayNotifier?.setSettingsOpen(false);
+    super.dispose();
   }
 
   Future<void> _loadAppVersion() async {
