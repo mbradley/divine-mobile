@@ -1,20 +1,23 @@
-// ABOUTME: Screen displaying list of users who follow the profile being viewed
-// ABOUTME: Uses BLoC pattern with Page/View separation
+// ABOUTME: Screen displaying another user's followers list
+// ABOUTME: Uses OthersFollowersBloc for list + MyFollowingBloc for follow button state
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:openvine/blocs/followers/followers_bloc.dart';
-import 'package:openvine/blocs/following/following_bloc.dart';
+import 'package:openvine/blocs/my_following/my_following_bloc.dart';
+import 'package:openvine/blocs/others_followers/others_followers_bloc.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/theme/vine_theme.dart';
 import 'package:openvine/widgets/user_profile_tile.dart';
 
-/// Page widget that creates the BLoCs and provides them to the view.
-class FollowersScreen extends ConsumerWidget {
-  const FollowersScreen({
+/// Page widget for displaying another user's followers list.
+///
+/// Creates both [OthersFollowersBloc] (for the list) and [MyFollowingBloc]
+/// (for follow button state) and provides them to the view.
+class OthersFollowersScreen extends ConsumerWidget {
+  const OthersFollowersScreen({
     super.key,
     required this.pubkey,
     required this.displayName,
@@ -31,27 +34,24 @@ class FollowersScreen extends ConsumerWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider(
-          create: (_) => FollowersBloc(
-            followRepository: followRepository,
+          create: (_) => OthersFollowersBloc(
             nostrClient: nostrClient,
-          )..add(FollowersListLoadRequested(pubkey)),
+            followRepository: followRepository,
+          )..add(OthersFollowersListLoadRequested(pubkey)),
         ),
         BlocProvider(
-          create: (_) => FollowingBloc(
-            followRepository: followRepository,
-            nostrClient: nostrClient,
-            targetPubkey: nostrClient.publicKey,
-          )..add(const FollowingListLoadRequested()),
+          create: (_) =>
+              MyFollowingBloc(followRepository: followRepository)
+                ..add(const MyFollowingListLoadRequested()),
         ),
       ],
-      child: _FollowersScreenView(pubkey: pubkey, displayName: displayName),
+      child: _OthersFollowersView(pubkey: pubkey, displayName: displayName),
     );
   }
 }
 
-/// View widget that consumes BLoC state and renders the followers list.
-class _FollowersScreenView extends StatelessWidget {
-  const _FollowersScreenView({required this.pubkey, required this.displayName});
+class _OthersFollowersView extends StatelessWidget {
+  const _OthersFollowersView({required this.pubkey, required this.displayName});
 
   final String pubkey;
   final String? displayName;
@@ -76,17 +76,28 @@ class _FollowersScreenView extends StatelessWidget {
           ),
         ),
       ),
-      body: BlocBuilder<FollowersBloc, FollowersState>(
+      body: BlocBuilder<OthersFollowersBloc, OthersFollowersState>(
         builder: (context, state) {
           return switch (state.status) {
-            FollowersStatus.initial || FollowersStatus.loading => const Center(
-              child: CircularProgressIndicator(),
-            ),
-            FollowersStatus.success => _FollowersListBody(
+            OthersFollowersStatus.initial || OthersFollowersStatus.loading =>
+              const Center(child: CircularProgressIndicator()),
+            OthersFollowersStatus.success => _FollowersListBody(
               followers: state.followersPubkeys,
-              pubkey: pubkey,
+              targetPubkey: pubkey,
             ),
-            FollowersStatus.failure => const _FollowersErrorBody(),
+            OthersFollowersStatus.failure => _FollowersErrorBody(
+              onRetry: () {
+                final targetPubkey = context
+                    .read<OthersFollowersBloc>()
+                    .state
+                    .targetPubkey;
+                if (targetPubkey != null) {
+                  context.read<OthersFollowersBloc>().add(
+                    OthersFollowersListLoadRequested(targetPubkey),
+                  );
+                }
+              },
+            ),
           };
         },
       ),
@@ -95,10 +106,13 @@ class _FollowersScreenView extends StatelessWidget {
 }
 
 class _FollowersListBody extends StatelessWidget {
-  const _FollowersListBody({required this.followers, required this.pubkey});
+  const _FollowersListBody({
+    required this.followers,
+    required this.targetPubkey,
+  });
 
   final List<String> followers;
-  final String pubkey;
+  final String targetPubkey;
 
   @override
   Widget build(BuildContext context) {
@@ -108,14 +122,17 @@ class _FollowersListBody extends StatelessWidget {
 
     return RefreshIndicator(
       onRefresh: () async {
-        context.read<FollowersBloc>().add(FollowersListLoadRequested(pubkey));
+        context.read<OthersFollowersBloc>().add(
+          OthersFollowersListLoadRequested(targetPubkey),
+        );
       },
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: followers.length,
         itemBuilder: (context, index) {
           final userPubkey = followers[index];
-          return BlocSelector<FollowingBloc, FollowingState, bool>(
+          // Use MyFollowingBloc to check if current user follows this person
+          return BlocSelector<MyFollowingBloc, MyFollowingState, bool>(
             selector: (state) => state.isFollowing(userPubkey),
             builder: (context, isFollowing) {
               return UserProfileTile(
@@ -123,8 +140,8 @@ class _FollowersListBody extends StatelessWidget {
                 onTap: () => context.goProfile(userPubkey, 0),
                 isFollowing: isFollowing,
                 onToggleFollow: () {
-                  context.read<FollowingBloc>().add(
-                    FollowToggleRequested(userPubkey),
+                  context.read<MyFollowingBloc>().add(
+                    MyFollowingToggleRequested(userPubkey),
                   );
                 },
               );
@@ -158,7 +175,9 @@ class _FollowersEmptyState extends StatelessWidget {
 }
 
 class _FollowersErrorBody extends StatelessWidget {
-  const _FollowersErrorBody();
+  const _FollowersErrorBody({required this.onRetry});
+
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -173,13 +192,7 @@ class _FollowersErrorBody extends StatelessWidget {
             style: TextStyle(color: Colors.grey[400], fontSize: 16),
           ),
           const SizedBox(height: 8),
-          TextButton(
-            onPressed: () {
-              // We need to get pubkey from somewhere - using empty string as fallback
-              // This should be improved by storing pubkey in BLoC state
-            },
-            child: const Text('Retry'),
-          ),
+          TextButton(onPressed: onRetry, child: const Text('Retry')),
         ],
       ),
     );
