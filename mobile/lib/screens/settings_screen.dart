@@ -42,7 +42,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final authService = ref.watch(authServiceProvider);
     final isAuthenticated = authService.isAuthenticated;
-    final isDeveloperMode = ref.watch(isDeveloperModeEnabledProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -72,46 +71,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   subtitle: 'Update your display name, bio, and avatar',
                   onTap: () => context.push('/edit-profile'),
                 ),
-                _buildSettingsTile(
-                  context,
-                  icon: Icons.key,
-                  title: 'Key Management',
-                  subtitle: 'Export, backup, and restore your Nostr keys',
-                  onTap: () => context.push('/key-management'),
-                ),
               ],
 
-              // Account Section (only show when authenticated)
-              if (isAuthenticated) ...[
-                _buildSectionHeader('Account'),
-                _buildSettingsTile(
-                  context,
-                  icon: Icons.logout,
-                  title: 'Log Out',
-                  subtitle: 'Sign out of your account (keeps your keys)',
-                  onTap: () => _handleLogout(context, ref),
-                ),
-                _buildSettingsTile(
-                  context,
-                  icon: Icons.key_off,
-                  title: 'Remove Keys from Device',
-                  subtitle:
-                      'Delete your nsec from this device (content stays on relays)',
-                  onTap: () => _handleRemoveKeys(context, ref),
-                  iconColor: Colors.orange,
-                  titleColor: Colors.orange,
-                ),
-                _buildSettingsTile(
-                  context,
-                  icon: Icons.delete_forever,
-                  title: 'Delete Account and Data',
-                  subtitle:
-                      'PERMANENTLY delete your account and all content from Nostr relays',
-                  onTap: () => _handleDeleteAllContent(context, ref),
-                  iconColor: Colors.red,
-                  titleColor: Colors.red,
-                ),
-              ],
+              // Preferences - most used settings near the top
+              _buildSectionHeader('Preferences'),
+              _buildSettingsTile(
+                context,
+                icon: Icons.notifications,
+                title: 'Notifications',
+                subtitle: 'Manage notification preferences',
+                onTap: () => context.push('/notification-settings'),
+              ),
+              _buildSettingsTile(
+                context,
+                icon: Icons.shield,
+                title: 'Safety & Privacy',
+                subtitle: 'Blocked users, muted content, and report history',
+                onTap: () => context.push('/safety-settings'),
+              ),
 
               // Network Configuration
               _buildSectionHeader('Network'),
@@ -136,35 +113,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 subtitle: 'Configure Blossom upload servers',
                 onTap: () => context.push('/blossom-settings'),
               ),
-
-              // Developer Options (only visible when developer mode is enabled)
-              if (isDeveloperMode) ...[
-                _buildSectionHeader('Developer'),
-                _buildSettingsTile(
-                  context,
-                  icon: Icons.developer_mode,
-                  title: 'Developer Options',
-                  subtitle: 'Environment switcher and debug settings',
-                  onTap: () => context.push('/developer-options'),
-                  iconColor: Colors.orange,
-                ),
-              ],
-
-              // Preferences
-              _buildSectionHeader('Preferences'),
               _buildSettingsTile(
                 context,
-                icon: Icons.notifications,
-                title: 'Notifications',
-                subtitle: 'Manage notification preferences',
-                onTap: () => context.push('/notification-settings'),
-              ),
-              _buildSettingsTile(
-                context,
-                icon: Icons.shield,
-                title: 'Safety & Privacy',
-                subtitle: 'Blocked users, muted content, and report history',
-                onTap: () => context.push('/safety-settings'),
+                icon: Icons.developer_mode,
+                title: 'Developer Options',
+                subtitle: 'Environment switcher and debug settings',
+                onTap: () => context.push('/developer-options'),
+                iconColor: Colors.orange,
               ),
 
               // About
@@ -238,6 +193,45 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   }
                 },
               ),
+
+              // Account and key management actions at the bottom
+              if (isAuthenticated) ...[
+                _buildSectionHeader('Account'),
+                _buildSettingsTile(
+                  context,
+                  icon: Icons.logout,
+                  title: 'Log Out',
+                  subtitle: 'Sign out of your account (keeps your keys)',
+                  onTap: () => _handleLogout(context, ref),
+                ),
+                _buildSettingsTile(
+                  context,
+                  icon: Icons.key,
+                  title: 'Key Management',
+                  subtitle: 'Export, backup, and restore your Nostr keys',
+                  onTap: () => context.push('/key-management'),
+                ),
+                _buildSettingsTile(
+                  context,
+                  icon: Icons.key_off,
+                  title: 'Remove Keys from Device',
+                  subtitle:
+                      'Delete your nsec from this device (content stays on relays)',
+                  onTap: () => _handleRemoveKeys(context, ref),
+                  iconColor: Colors.orange,
+                  titleColor: Colors.orange,
+                ),
+                _buildSettingsTile(
+                  context,
+                  icon: Icons.delete_forever,
+                  title: 'Delete Account and Data',
+                  subtitle:
+                      'PERMANENTLY delete your account and all content from Nostr relays',
+                  onTap: () => _handleDeleteAllContent(context, ref),
+                  iconColor: Colors.red,
+                  titleColor: Colors.red,
+                ),
+              ],
             ],
           ),
         ),
