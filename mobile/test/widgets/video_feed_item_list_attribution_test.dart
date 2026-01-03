@@ -1,5 +1,6 @@
 // ABOUTME: Tests for list attribution chip display in VideoFeedItem
 // ABOUTME: Verifies chip appears when showListAttribution is true and listSources is provided
+// ignore_for_file: dead_code
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
