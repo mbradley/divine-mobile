@@ -246,19 +246,22 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
       children: [
         // Tabs always visible
         Container(
-          color: VineTheme.cardBackground,
+          color: VineTheme.navGreen,
           child: TabBar(
             controller: _tabController,
-            indicatorColor: VineTheme.whiteText,
-            indicatorWeight: 3,
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
+            padding: const EdgeInsets.only(left: 16),
+            indicatorColor: VineTheme.tabIndicatorGreen,
+            indicatorWeight: 4,
             indicatorSize: TabBarIndicatorSize.tab,
             dividerColor: Colors.transparent,
             labelColor: VineTheme.whiteText,
-            unselectedLabelColor: VineTheme.whiteText.withValues(alpha: 0.7),
-            labelPadding: const EdgeInsets.symmetric(horizontal: 8),
-            labelStyle: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
+            unselectedLabelColor: VineTheme.tabIconInactive,
+            labelPadding: const EdgeInsets.symmetric(horizontal: 14),
+            labelStyle: VineTheme.tabTextStyle(),
+            unselectedLabelStyle: VineTheme.tabTextStyle(
+              color: VineTheme.tabIconInactive,
             ),
             onTap: (index) {
               // If tapping the currently active tab, reset to default state (exit feed/hashtag mode)
