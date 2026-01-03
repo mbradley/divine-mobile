@@ -229,6 +229,7 @@ class SubscribedListVideoCache extends ChangeNotifier {
           // Use permissive mode to accept all NIP-71 video kinds
           final video = VideoEvent.fromNostrEvent(event, permissive: true);
           _addVideoToCache(video, listId);
+          _videoEventService.addVideoEvent(video);
 
           Log.debug(
             'Fetched video (kind ${event.kind}): ${video.title ?? video.id}',
