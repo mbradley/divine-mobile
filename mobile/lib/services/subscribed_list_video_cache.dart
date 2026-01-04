@@ -119,14 +119,15 @@ class SubscribedListVideoCache extends ChangeNotifier {
     final subscribedLists = _curatedListService.subscribedLists;
 
     Log.info(
-      'Syncing ${subscribedLists.length} subscribed lists',
+      'Syncing ${subscribedLists.length} subscribed lists in parallel',
       name: 'SubscribedListVideoCache',
       category: LogCategory.video,
     );
 
-    for (final list in subscribedLists) {
-      await syncList(list.id, list.videoEventIds);
-    }
+    // Sync all lists in parallel for faster loading
+    await Future.wait(
+      subscribedLists.map((list) => syncList(list.id, list.videoEventIds)),
+    );
   }
 
   /// Removes a list from the cache (called on unsubscribe)
