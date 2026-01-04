@@ -447,10 +447,15 @@ class HomeFeed extends _$HomeFeed {
       );
     }
 
+    // Keep showing loading if we have no videos but might still be getting them from lists
+    // This prevents showing "empty" while subscribed list cache is still syncing
+    final stillLoadingLists = followingVideos.isEmpty && hasSubscribedLists;
+
     final feedState = VideoFeedState(
       videos: followingVideos,
       hasMoreContent: followingVideos.length >= 10,
       isLoadingMore: false,
+      isInitialLoad: stillLoadingLists,
       error: null,
       lastUpdated: DateTime.now(),
       videoListSources: videoListSources,
