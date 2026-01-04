@@ -190,7 +190,7 @@ void main() {
       expect(capturedEmail, 'testuser@example.com');
     });
 
-    test('uses synthetic email with full npub when NIP-05 not available', () async {
+    test('uses full npub as email when NIP-05 not available', () async {
       String? capturedEmail;
 
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -209,14 +209,16 @@ void main() {
         zendeskUrl: 'https://test.zendesk.com',
       );
 
-      const testNpub = 'npub1abcdef1234567890abcdef1234567890abcdef1234567890abcdef12345';
+      const testNpub =
+          'npub1abcdef1234567890abcdef1234567890abcdef1234567890abcdef12345';
       await ZendeskSupportService.setUserIdentity(
         displayName: null,
         nip05: null,
         npub: testNpub,
       );
 
-      // CRITICAL: Uses full npub (never truncated) for traceability
+      // CRITICAL: Uses full npub for unique user identification
+      // Email format: {npub}@divine.video
       expect(capturedEmail, '$testNpub@divine.video');
     });
 
@@ -239,7 +241,8 @@ void main() {
         zendeskUrl: 'https://test.zendesk.com',
       );
 
-      const testNpub = 'npub1abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuv';
+      const testNpub =
+          'npub1abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuv';
       await ZendeskSupportService.setUserIdentity(
         displayName: null,
         nip05: null,
@@ -250,17 +253,20 @@ void main() {
       expect(capturedName, testNpub);
     });
 
-    test('returns true even when native SDK not initialized (REST API fallback)', () async {
-      // Don't initialize native SDK
-      final result = await ZendeskSupportService.setUserIdentity(
-        displayName: 'Test',
-        nip05: 'test@example.com',
-        npub: 'npub1test',
-      );
+    test(
+      'returns true even when native SDK not initialized (REST API fallback)',
+      () async {
+        // Don't initialize native SDK
+        final result = await ZendeskSupportService.setUserIdentity(
+          displayName: 'Test',
+          nip05: 'test@example.com',
+          npub: 'npub1test',
+        );
 
-      // Should still return true because REST API can use stored values
-      expect(result, true);
-    });
+        // Should still return true because REST API can use stored values
+        expect(result, true);
+      },
+    );
 
     test('handles PlatformException gracefully', () async {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -380,7 +386,8 @@ void main() {
         zendeskUrl: 'https://test.zendesk.com',
       );
 
-      const testNpub = 'npub1consistent1234567890abcdef1234567890abcdef1234567890ab';
+      const testNpub =
+          'npub1consistent1234567890abcdef1234567890abcdef1234567890ab';
 
       // Call setUserIdentity twice with same npub
       await ZendeskSupportService.setUserIdentity(

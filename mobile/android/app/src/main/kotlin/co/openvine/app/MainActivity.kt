@@ -231,10 +231,12 @@ class MainActivity : FlutterActivity() {
                         // Initialize Support SDK
                         Support.INSTANCE.init(Zendesk.INSTANCE)
 
-                        // DON'T set anonymous identity here - let Flutter set it with user info
-                        // Setting plain anonymous here conflicts with the email-based identity
-                        // that Flutter sets later via setUserIdentity
-                        Log.d(ZENDESK_TAG, "Zendesk initialized (waiting for Flutter to set identity)")
+                        // Set baseline anonymous identity so widget works immediately
+                        // Flutter will update with email-based identity when user logs in
+                        val identity: Identity = AnonymousIdentity()
+                        Zendesk.INSTANCE.setIdentity(identity)
+
+                        Log.d(ZENDESK_TAG, "Zendesk initialized with anonymous identity")
                         result.success(true)
                     } catch (e: Exception) {
                         Log.e(ZENDESK_TAG, "Failed to initialize Zendesk", e)
@@ -318,6 +320,22 @@ class MainActivity : FlutterActivity() {
                     } catch (e: Exception) {
                         Log.e(ZENDESK_TAG, "Failed to clear user identity", e)
                         result.error("CLEAR_IDENTITY_FAILED", e.message, null)
+                    }
+                }
+
+                "setAnonymousIdentity" -> {
+                    try {
+                        Log.d(ZENDESK_TAG, "Setting anonymous identity")
+
+                        // Set plain anonymous identity (for non-logged-in users)
+                        val identity: Identity = AnonymousIdentity()
+                        Zendesk.INSTANCE.setIdentity(identity)
+
+                        Log.d(ZENDESK_TAG, "Anonymous identity set")
+                        result.success(true)
+                    } catch (e: Exception) {
+                        Log.e(ZENDESK_TAG, "Failed to set anonymous identity", e)
+                        result.error("SET_ANONYMOUS_IDENTITY_FAILED", e.message, null)
                     }
                 }
 

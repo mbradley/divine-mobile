@@ -187,10 +187,12 @@ import SupportProvidersSDK
         // Initialize Support SDK
         Support.initialize(withZendesk: Zendesk.instance)
 
-        // DON'T set anonymous identity here - let Flutter set it with user info
-        // Setting plain anonymous here conflicts with the email-based identity
-        // that Flutter sets later via setUserIdentity
-        NSLog("✅ Zendesk: Initialized (waiting for Flutter to set identity)")
+        // Set baseline anonymous identity so widget works immediately
+        // Flutter will update with email-based identity when user logs in
+        let identity = Identity.createAnonymous()
+        Zendesk.instance?.setIdentity(identity)
+
+        NSLog("✅ Zendesk: Initialized with anonymous identity")
         result(true)
 
       case "showNewTicket":
@@ -264,6 +266,16 @@ import SupportProvidersSDK
         Zendesk.instance?.setIdentity(identity)
 
         NSLog("✅ Zendesk: User identity cleared")
+        result(true)
+
+      case "setAnonymousIdentity":
+        NSLog("🎫 Zendesk: Setting anonymous identity")
+
+        // Set plain anonymous identity (for non-logged-in users)
+        let identity = Identity.createAnonymous()
+        Zendesk.instance?.setIdentity(identity)
+
+        NSLog("✅ Zendesk: Anonymous identity set")
         result(true)
 
       case "createTicket":

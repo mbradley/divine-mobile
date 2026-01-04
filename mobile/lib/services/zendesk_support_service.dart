@@ -2,6 +2,7 @@
 // ABOUTME: Provides ticket creation via native iOS/Android SDKs or REST API for desktop
 
 import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:openvine/config/zendesk_config.dart';
@@ -107,7 +108,7 @@ class ZendeskSupportService {
 
     // Determine email: use NIP-05 if it looks like an email, otherwise create synthetic email
     // NIP-05 format is user@domain which works as email identifier
-    // CRITICAL: Never truncate Nostr IDs - use full npub for traceability
+    // Full npub (63 chars) is within RFC 5321 local-part limit (64 chars)
     final effectiveEmail = nip05?.isNotEmpty == true && nip05!.contains('@')
         ? nip05
         : '$npub@divine.video';
@@ -176,6 +177,27 @@ class ZendeskSupportService {
       } catch (e) {
         Log.warning(
           'Error clearing Zendesk identity: $e',
+          category: LogCategory.system,
+        );
+      }
+    }
+  }
+
+  /// Set anonymous identity (for non-logged-in users)
+  ///
+  /// Sets a plain anonymous identity without name/email so Zendesk widget works.
+  /// Should be called before showing ticket screens if user is not logged in.
+  static Future<void> setAnonymousIdentity() async {
+    if (_initialized) {
+      try {
+        await _channel.invokeMethod('setAnonymousIdentity');
+        Log.info(
+          'Zendesk anonymous identity set',
+          category: LogCategory.system,
+        );
+      } catch (e) {
+        Log.warning(
+          'Error setting Zendesk anonymous identity: $e',
           category: LogCategory.system,
         );
       }
@@ -384,8 +406,8 @@ class ZendeskSupportService {
     List<String>? tags,
   }) async {
     if (!ZendeskConfig.isRestApiConfigured) {
-      Log.warning(
-        'Zendesk REST API not configured - missing API token',
+      Log.error(
+        '❌ Zendesk REST API not configured - ZENDESK_API_TOKEN not set in build',
         category: LogCategory.system,
       );
       return false;

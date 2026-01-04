@@ -464,7 +464,8 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
     dynamic userProfileService,
   ) async {
     if (userPubkey == null) {
-      print('⚠️ Zendesk: No userPubkey provided, skipping identity set');
+      // Users always have pubkey in this app, but handle edge case gracefully
+      print('⚠️ Zendesk: No userPubkey, using baseline anonymous identity');
       return;
     }
 
@@ -472,7 +473,9 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
       final npub = NostrKeyUtils.encodePubKey(userPubkey);
       final profile = userProfileService.getCachedProfile(userPubkey);
 
-      print('🎫 Zendesk: Setting identity for ${profile?.bestDisplayName ?? npub}');
+      print(
+        '🎫 Zendesk: Setting identity for ${profile?.bestDisplayName ?? npub}',
+      );
       print('🎫 Zendesk: NIP-05: ${profile?.nip05 ?? "none"}');
 
       await ZendeskSupportService.setUserIdentity(
