@@ -38,12 +38,6 @@ class _FakeCountResult_0 extends _i1.SmartFake implements _i2.CountResult {
     : super(parent, parentInvocation);
 }
 
-class _FakeNostrBroadcastResult_1 extends _i1.SmartFake
-    implements _i2.NostrBroadcastResult {
-  _FakeNostrBroadcastResult_1(Object parent, Invocation parentInvocation)
-    : super(parent, parentInvocation);
-}
-
 /// A class which mocks [AudioPlaybackService].
 ///
 /// See the documentation for Mockito's code generation for more information.
@@ -619,30 +613,6 @@ class MockNostrClient extends _i1.Mock implements _i5.NostrClient {
             returnValue: _i4.Stream<_i7.Event>.empty(),
           )
           as _i4.Stream<_i7.Event>);
-
-  @override
-  _i4.Future<_i2.NostrBroadcastResult> broadcast(
-    _i7.Event? event, {
-    List<String>? targetRelays,
-  }) =>
-      (super.noSuchMethod(
-            Invocation.method(
-              #broadcast,
-              [event],
-              {#targetRelays: targetRelays},
-            ),
-            returnValue: _i4.Future<_i2.NostrBroadcastResult>.value(
-              _FakeNostrBroadcastResult_1(
-                this,
-                Invocation.method(
-                  #broadcast,
-                  [event],
-                  {#targetRelays: targetRelays},
-                ),
-              ),
-            ),
-          )
-          as _i4.Future<_i2.NostrBroadcastResult>);
 
   @override
   _i4.Future<void> dispose() =>

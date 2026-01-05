@@ -20,25 +20,10 @@ void main() {
     late MockAuthService mockAuth;
     late SharedPreferences prefs;
 
-    // Helper to stub broadcast - call after reset(mockNostr)
-    void stubBroadcast() {
-      when(mockNostr.broadcast(any)).thenAnswer((_) async {
-        final event = Event.fromJson({
-          'id': 'test_event_id',
-          'pubkey': 'test_pubkey_123456789abcdef',
-          'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
-          'kind': 30005,
-          'tags': [],
-          'content': 'test',
-          'sig': 'test_sig',
-        });
-        return NostrBroadcastResult(
-          event: event,
-          successCount: 1,
-          totalRelays: 1,
-          results: {'wss://relay.example.com': true},
-          errors: {},
-        );
+    // Helper to stub publishEvent - call after reset(mockNostr)
+    void stubPublishEvent() {
+      when(mockNostr.publishEvent(any)).thenAnswer((invocation) async {
+        return invocation.positionalArguments[0] as Event;
       });
     }
 
@@ -53,7 +38,7 @@ void main() {
         mockAuth.currentPublicKeyHex,
       ).thenReturn('test_pubkey_123456789abcdef');
 
-      stubBroadcast();
+      stubPublishEvent();
 
       when(
         mockNostr.subscribe(argThat(anything), onEose: anyNamed('onEose')),
@@ -174,11 +159,11 @@ void main() {
         // Add a video so the list isn't empty (empty lists skip publishing)
         await service.addVideoToList(list!.id, 'test_video_id');
         reset(mockNostr);
-        stubBroadcast(); // Re-stub after reset for strict mocks
+        stubPublishEvent(); // Re-stub after reset for strict mocks
 
         await service.addCollaborator(list.id, 'collaborator_1');
 
-        verify(mockNostr.broadcast(any)).called(1);
+        verify(mockNostr.publishEvent(any)).called(1);
       });
 
       test('updates updatedAt timestamp', () async {
@@ -255,11 +240,11 @@ void main() {
         await service.addVideoToList(list!.id, 'test_video_id');
         await service.addCollaborator(list.id, 'collaborator_1');
         reset(mockNostr);
-        stubBroadcast(); // Re-stub after reset for strict mocks
+        stubPublishEvent(); // Re-stub after reset for strict mocks
 
         await service.removeCollaborator(list.id, 'collaborator_1');
 
-        verify(mockNostr.broadcast(any)).called(1);
+        verify(mockNostr.publishEvent(any)).called(1);
       });
 
       test('handles removing last collaborator', () async {
