@@ -41,6 +41,7 @@ class VineTheme {
   static const Color iconButtonBackground = Color(0xFF032017);
   static const Color tabIconInactive = Color(0xFF40504A);
   static const Color tabIndicatorGreen = Color(0xFF27C58B);
+  static const Color cameraButtonGreen = Color(0xFF00B386);
 
   // Surface colors (from Figma design system)
   static const Color surfaceBackground = Color(0xFF00150D);
@@ -150,34 +151,6 @@ class VineTheme {
       elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.all(Radius.circular(8)),
-      ),
-    ),
-    inputDecorationTheme: InputDecorationTheme(
-      labelStyle: const TextStyle(color: Colors.white70),
-      filled: true,
-      fillColor: Colors.white.withValues(alpha: 0.1),
-      hintStyle: bodyFont(fontSize: 14, color: lightText),
-      errorStyle: TextStyle(color: Colors.yellow[300]),
-      prefixIconColor: Colors.white70,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Colors.white24),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Colors.white, width: 2),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Colors.red),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Colors.red, width: 2),
       ),
     ),
   );

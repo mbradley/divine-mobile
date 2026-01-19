@@ -235,12 +235,19 @@ flutter:
     - assets/icon/menu.svg
     - assets/icon/search.svg
     - assets/icon/camera.svg
+    - assets/icon/retro-camera.svg
     - assets/icon/CaretLeft.svg
     - assets/icon/delete.svg
     - assets/icon/house.svg
     - assets/icon/compass.svg
     - assets/icon/bell.svg
     - assets/icon/userCircle.svg
+    - assets/icon/content-controls/
+    - assets/icon/Icon-Follow.svg
+    - assets/icon/Icon-Following.svg
+    - assets/icon/ArrowClockwise.svg
+    - assets/icon/Check.svg
+    - assets/icon/plus.svg
     - assets/icon/arrow_bend_down_right.svg
     - assets/loading-brand.gif
     - assets/seed_data/seed_events.sql

@@ -1,5 +1,5 @@
 // ABOUTME: AppShell widget providing bottom navigation and dynamic header
-// ABOUTME: Header title uses Bricolage Grotesque font, includes camera button
+// ABOUTME: Header title uses Bricolage Grotesque font, camera button in bottom nav
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,6 +24,7 @@ import 'route_utils.dart';
 import 'nav_extensions.dart';
 import 'last_tab_position_provider.dart';
 import 'tab_history_provider.dart';
+import 'package:openvine/providers/route_feed_providers.dart';
 
 class AppShell extends ConsumerWidget {
   const AppShell({super.key, required this.child, required this.currentIndex});
@@ -37,6 +38,20 @@ class AppShell extends ConsumerWidget {
       case RouteType.home:
         return 'Home';
       case RouteType.explore:
+        // When in feed mode (watching a video), show the tab name
+        if (ctx?.videoIndex != null) {
+          final tabIndex = ref.watch(exploreTabIndexProvider);
+          switch (tabIndex) {
+            case 0:
+              return 'New Videos';
+            case 1:
+              return 'Popular Videos';
+            case 2:
+              return 'Lists';
+            default:
+              return 'Explore';
+          }
+        }
         return 'Explore';
       case RouteType.notifications:
         return 'Notifications';
@@ -519,38 +534,6 @@ class AppShell extends ConsumerWidget {
                     context.goSearch();
                   },
                 ),
-                const SizedBox(width: 8),
-                IconButton(
-                  tooltip: 'Open camera',
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  icon: Container(
-                    width: 48,
-                    height: 48,
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: VineTheme.iconButtonBackground,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: SvgPicture.asset(
-                      'assets/icon/camera.svg',
-                      width: 32,
-                      height: 32,
-                      colorFilter: const ColorFilter.mode(
-                        Colors.white,
-                        BlendMode.srcIn,
-                      ),
-                    ),
-                  ),
-                  onPressed: () {
-                    Log.info(
-                      '👆 User tapped camera button',
-                      name: 'Navigation',
-                      category: LogCategory.ui,
-                    );
-                    context.pushCamera();
-                  },
-                ),
                 const SizedBox(width: 16),
               ],
       ),
@@ -581,6 +564,39 @@ class AppShell extends ConsumerWidget {
                 1,
                 currentIndex,
                 'explore_tab',
+              ),
+              // Camera button in center of bottom nav
+              Semantics(
+                identifier: 'camera_button',
+                button: true,
+                label: 'Open camera',
+                child: GestureDetector(
+                  onTap: () {
+                    Log.info(
+                      '👆 User tapped camera button',
+                      name: 'Navigation',
+                      category: LogCategory.ui,
+                    );
+                    context.pushCamera();
+                  },
+                  child: Container(
+                    width: 72,
+                    height: 48,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: VineTheme.cameraButtonGreen,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: SvgPicture.asset(
+                      'assets/icon/retro-camera.svg',
+                      width: 32,
+                      height: 32,
+                    ),
+                  ),
+                ),
               ),
               _buildTabButton(
                 context,

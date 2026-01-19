@@ -333,6 +333,8 @@ class _HomeScreenRouterState extends ConsumerState<HomeScreenRouter>
                     index: index,
                     hasBottomNavigation: false,
                     contextTitle: '', // Home feed has no context title
+                    hideFollowButtonIfFollowing:
+                        true, // Home feed only shows followed users
                     isActiveOverride: isActive,
                   );
                 },
