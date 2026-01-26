@@ -1173,13 +1173,20 @@ LikesRepository likesRepository(Ref ref) {
   ref.watch(authStateStreamProvider);
 
   final isAuthenticated = authService.isAuthenticated;
+  final userPubkey = authService.currentPublicKeyHex;
 
   final nostrClient = ref.watch(nostrServiceProvider);
-  final db = ref.watch(databaseProvider);
-  final localStorage = DbLikesLocalStorage(
-    dao: db.personalReactionsDao,
-    userPubkey: authService.currentPublicKeyHex!,
-  );
+
+  // Only create localStorage if we have a valid user pubkey
+  // The provider will rebuild when auth state changes
+  DbLikesLocalStorage? localStorage;
+  if (userPubkey != null) {
+    final db = ref.watch(databaseProvider);
+    localStorage = DbLikesLocalStorage(
+      dao: db.personalReactionsDao,
+      userPubkey: userPubkey,
+    );
+  }
 
   // Map AuthState stream to bool stream for repository
   final authBoolStream = authService.authStateStream.map(
@@ -1202,16 +1209,33 @@ LikesRepository likesRepository(Ref ref) {
 ///
 /// Creates a RepostsRepository for managing user reposts (Kind 16 generic
 /// reposts).
-/// Uses AuthService.createAndSignEvent for event creation.
+///
+/// Uses:
+/// - NostrClient from nostrServiceProvider (for relay communication)
+/// - PersonalRepostsDao from databaseProvider (for local storage)
 @Riverpod(keepAlive: true)
 RepostsRepository repostsRepository(Ref ref) {
   final authService = ref.watch(authServiceProvider);
-  final nostrClient = ref.watch(nostrServiceProvider);
 
   // Watch auth state stream to react to auth changes (login/logout)
+  // This ensures the provider rebuilds when authentication completes
   ref.watch(authStateStreamProvider);
 
   final isAuthenticated = authService.isAuthenticated;
+  final userPubkey = authService.currentPublicKeyHex;
+
+  final nostrClient = ref.watch(nostrServiceProvider);
+
+  // Only create localStorage if we have a valid user pubkey
+  // The provider will rebuild when auth state changes
+  DbRepostsLocalStorage? localStorage;
+  if (userPubkey != null) {
+    final db = ref.watch(databaseProvider);
+    localStorage = DbRepostsLocalStorage(
+      dao: db.personalRepostsDao,
+      userPubkey: userPubkey,
+    );
+  }
 
   // Map AuthState stream to bool stream for repository
   final authBoolStream = authService.authStateStream.map(
@@ -1220,6 +1244,7 @@ RepostsRepository repostsRepository(Ref ref) {
 
   final repository = RepostsRepository(
     nostrClient: nostrClient,
+    localStorage: localStorage,
     authStateStream: authBoolStream,
     isAuthenticated: isAuthenticated,
   );

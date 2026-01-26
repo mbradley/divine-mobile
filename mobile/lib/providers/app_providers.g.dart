@@ -3465,13 +3465,16 @@ final class LikesRepositoryProvider
   }
 }
 
-String _$likesRepositoryHash() => r'62defb128dde642ba8b874984307d47d42a8dd63';
+String _$likesRepositoryHash() => r'bade0098417d673eb8e253ee8f4f31074387dc9a';
 
 /// Provider for RepostsRepository instance
 ///
 /// Creates a RepostsRepository for managing user reposts (Kind 16 generic
 /// reposts).
-/// Uses AuthService.createAndSignEvent for event creation.
+///
+/// Uses:
+/// - NostrClient from nostrServiceProvider (for relay communication)
+/// - PersonalRepostsDao from databaseProvider (for local storage)
 
 @ProviderFor(repostsRepository)
 const repostsRepositoryProvider = RepostsRepositoryProvider._();
@@ -3480,7 +3483,10 @@ const repostsRepositoryProvider = RepostsRepositoryProvider._();
 ///
 /// Creates a RepostsRepository for managing user reposts (Kind 16 generic
 /// reposts).
-/// Uses AuthService.createAndSignEvent for event creation.
+///
+/// Uses:
+/// - NostrClient from nostrServiceProvider (for relay communication)
+/// - PersonalRepostsDao from databaseProvider (for local storage)
 
 final class RepostsRepositoryProvider
     extends
@@ -3494,7 +3500,10 @@ final class RepostsRepositoryProvider
   ///
   /// Creates a RepostsRepository for managing user reposts (Kind 16 generic
   /// reposts).
-  /// Uses AuthService.createAndSignEvent for event creation.
+  ///
+  /// Uses:
+  /// - NostrClient from nostrServiceProvider (for relay communication)
+  /// - PersonalRepostsDao from databaseProvider (for local storage)
   const RepostsRepositoryProvider._()
     : super(
         from: null,
@@ -3529,4 +3538,4 @@ final class RepostsRepositoryProvider
   }
 }
 
-String _$repostsRepositoryHash() => r'2f2f22ddfc87f03ef9d2f617b8402ea641b373f7';
+String _$repostsRepositoryHash() => r'0ea3679801eb26d97ae274060e8c607a28184c93';
