@@ -51,7 +51,9 @@ import 'package:openvine/services/nip17_message_service.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 import 'package:openvine/services/notification_service_enhanced.dart';
 import 'package:openvine/services/nsfw_content_filter.dart';
+import 'package:openvine/services/email_verification_listener.dart';
 import 'package:openvine/services/password_reset_listener.dart';
+import 'package:openvine/services/pending_verification_service.dart';
 import 'package:openvine/services/personal_event_cache_service.dart';
 import 'package:openvine/services/profile_cache_service.dart';
 import 'package:openvine/services/relay_capability_service.dart';
@@ -330,6 +332,10 @@ SecureKeycastStorage secureKeycastStorage(Ref ref) =>
     SecureKeycastStorage(ref.watch(flutterSecureStorageProvider));
 
 @Riverpod(keepAlive: true)
+PendingVerificationService pendingVerificationService(Ref ref) =>
+    PendingVerificationService(ref.watch(flutterSecureStorageProvider));
+
+@Riverpod(keepAlive: true)
 KeycastOAuth oauthClient(Ref ref) {
   final config = ref.watch(oauthConfigProvider);
   final storage = ref.watch(secureKeycastStorageProvider);
@@ -344,6 +350,13 @@ KeycastOAuth oauthClient(Ref ref) {
 @Riverpod(keepAlive: true)
 PasswordResetListener passwordResetListener(Ref ref) {
   final listener = PasswordResetListener(ref);
+  ref.onDispose(() => listener.dispose());
+  return listener;
+}
+
+@Riverpod(keepAlive: true)
+EmailVerificationListener emailVerificationListener(Ref ref) {
+  final listener = EmailVerificationListener(ref);
   ref.onDispose(() => listener.dispose());
   return listener;
 }
@@ -473,26 +486,37 @@ AuthService authService(Ref ref) {
   final oauthClient = ref.watch(oauthClientProvider);
   final flutterSecureStorage = ref.watch(flutterSecureStorageProvider);
   final oauthConfig = ref.watch(oauthConfigProvider);
+  final pendingVerificationService = ref.watch(
+    pendingVerificationServiceProvider,
+  );
   return AuthService(
     userDataCleanupService: userDataCleanupService,
     keyStorage: keyStorage,
     oauthClient: oauthClient,
     flutterSecureStorage: flutterSecureStorage,
     oauthConfig: oauthConfig,
+    pendingVerificationService: pendingVerificationService,
   );
 }
 
-/// Stream provider for reactive auth state changes
-/// Widgets should watch this instead of authService.authState to get rebuilds
-@riverpod
-Stream<AuthState> authStateStream(Ref ref) async* {
+/// Provider that returns current auth state and rebuilds when it changes.
+/// Widgets should watch this instead of authService.authState directly
+/// to get automatic rebuilds when authentication state changes.
+@Riverpod(keepAlive: true)
+AuthState currentAuthState(Ref ref) {
   final authService = ref.watch(authServiceProvider);
 
-  // Emit current state immediately
-  yield authService.authState;
+  // Listen to auth state changes and invalidate this provider when they occur
+  final subscription = authService.authStateStream.listen((_) {
+    // Invalidate to trigger rebuild with new state
+    ref.invalidateSelf();
+  });
 
-  // Then emit all future changes
-  yield* authService.authStateStream;
+  // Clean up subscription when provider is disposed
+  ref.onDispose(subscription.cancel);
+
+  // Return current state
+  return authService.authState;
 }
 
 /// Provider that sets Zendesk user identity when auth state changes
@@ -1184,9 +1208,9 @@ VideosRepository videosRepository(Ref ref) {
 LikesRepository likesRepository(Ref ref) {
   final authService = ref.watch(authServiceProvider);
 
-  // Watch auth state stream to react to auth changes (login/logout)
+  // Watch auth state to react to auth changes (login/logout)
   // This ensures the provider rebuilds when authentication completes
-  ref.watch(authStateStreamProvider);
+  ref.watch(currentAuthStateProvider);
 
   final isAuthenticated = authService.isAuthenticated;
   final userPubkey = authService.currentPublicKeyHex;
@@ -1233,9 +1257,8 @@ LikesRepository likesRepository(Ref ref) {
 RepostsRepository repostsRepository(Ref ref) {
   final authService = ref.watch(authServiceProvider);
 
-  // Watch auth state stream to react to auth changes (login/logout)
-  // This ensures the provider rebuilds when authentication completes
-  ref.watch(authStateStreamProvider);
+  // Watch auth state to react to auth changes (login/logout)
+  ref.watch(currentAuthStateProvider);
 
   final isAuthenticated = authService.isAuthenticated;
   final userPubkey = authService.currentPublicKeyHex;

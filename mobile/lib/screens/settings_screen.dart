@@ -60,6 +60,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       _overlayNotifier = ref.read(overlayVisibilityProvider.notifier);
       _overlayNotifier?.setSettingsOpen(true);
     });
+    Log.debug(
+      '👨‍💻 settingsService initState auth',
+      name: 'SettingsScreen',
+      category: LogCategory.ui,
+    );
   }
 
   @override
@@ -80,12 +85,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final authService = ref.watch(authServiceProvider);
-    final authStateAsync = ref.watch(authStateStreamProvider);
-    final isAuthenticated = authStateAsync.when(
-      data: (state) => state == AuthState.authenticated,
-      loading: () => false,
-      error: (_, __) => false,
-    );
+    // Use currentAuthStateProvider for synchronous access to auth state
+    // This provider invalidates itself when auth state changes
+    final authState = ref.watch(currentAuthStateProvider);
+    final isAuthenticated = authState == AuthState.authenticated;
 
     return Scaffold(
       appBar: AppBar(
@@ -565,6 +568,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       onConfirm: () async {
         // Show loading indicator
         if (!context.mounted) return;
+
+        // show busy dialog, but don't await it as the code needs to continue
+        // to signOut the user and deleteKeys. Changing the authentication state
+        // will redirect the user away and cause this to close.
         unawaited(
           showDialog<void>(
             context: context,
