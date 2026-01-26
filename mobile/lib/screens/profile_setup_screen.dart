@@ -14,6 +14,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:openvine/blocs/profile_editor/profile_editor_bloc.dart';
+import 'package:openvine/models/user_profile.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/overlay_visibility_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
@@ -139,13 +140,15 @@ class _ProfileSetupScreenViewState
     if (!widget.isNewUser) {
       // For imported users, try to load their existing profile
       try {
-        final userProfileService = ref.read(userProfileServiceProvider);
         final authService = ref.read(authServiceProvider);
 
         if (authService.currentPublicKeyHex != null) {
-          final profile = await userProfileService.fetchProfile(
-            authService.currentPublicKeyHex!,
-          );
+          final repoProfile = await ref
+              .read(profileRepositoryProvider)
+              .getProfile(pubkey: authService.currentPublicKeyHex!);
+          final profile = repoProfile != null
+              ? UserProfile.fromJson(repoProfile.toJson())
+              : null;
           if (profile != null && mounted) {
             setState(() {
               // Use bestDisplayName which handles name/displayName fallback properly
