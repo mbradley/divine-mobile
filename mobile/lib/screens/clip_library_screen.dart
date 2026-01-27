@@ -209,6 +209,16 @@ class _ClipLibraryScreenState extends ConsumerState<ClipLibraryScreen> {
             : AppBar(
                 backgroundColor: const Color(0xFF101111),
                 foregroundColor: VineTheme.whiteText,
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () {
+                    if (context.canPop()) {
+                      context.pop();
+                    } else {
+                      context.goHome();
+                    }
+                  },
+                ),
                 title: Text(_buildAppBarTitle()),
                 actions: [
                   // Clear selection button when clips are selected
@@ -284,52 +294,55 @@ class _SelectionHeader extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Column(
       children: [
-        const Padding(
-          padding: .fromLTRB(0, 8, 0, 16),
-          child: VineBottomSheetDragHandle(),
-        ),
-        Row(
-          mainAxisSize: .min,
-          spacing: 4,
-          children: [
-            const Spacer(),
-            Column(
-              mainAxisSize: .min,
-              mainAxisAlignment: .center,
-              children: [
-                Text(
-                  // TODO(l10n): Replace with context.l10n when localization is added.
-                  'Clips',
-                  style: VineTheme.titleFont(
-                    color: VineTheme.onSurface,
-                    fontSize: 18,
-                    height: 1.33,
-                    letterSpacing: 0.15,
+        Padding(
+          padding: const .only(bottom: 16.0),
+          child: Row(
+            mainAxisSize: .min,
+            spacing: 4,
+            children: [
+              const Spacer(),
+              Column(
+                mainAxisSize: .min,
+                mainAxisAlignment: .center,
+                children: [
+                  Text(
+                    // TODO(l10n): Replace with context.l10n when localization is added.
+                    'Clips',
+                    style: VineTheme.titleFont(
+                      color: VineTheme.onSurface,
+                      fontSize: 18,
+                      height: 1.33,
+                      letterSpacing: 0.15,
+                    ),
+                  ),
+                  Text(
+                    '${remainingDuration.toFormattedSeconds()}s remaining',
+                    style: VineTheme.bodyFont(
+                      color: const Color(0xBEFFFFFF),
+                      fontSize: 12,
+                      height: 1.33,
+                      letterSpacing: 0.40,
+                    ).copyWith(fontFeatures: [const .tabularFigures()]),
+                  ),
+                ],
+              ),
+              Expanded(
+                child: Align(
+                  alignment: .centerRight,
+                  child: _AddClipButton(
+                    onTap: selectedClipIds.isNotEmpty ? onCreate : context.pop,
+                    enable: selectedClipIds.isNotEmpty,
                   ),
                 ),
-                Text(
-                  '${remainingDuration.toFormattedSeconds()}s remaining',
-                  style: VineTheme.bodyFont(
-                    color: const Color(0xBEFFFFFF),
-                    fontSize: 12,
-                    height: 1.33,
-                    letterSpacing: 0.40,
-                  ).copyWith(fontFeatures: [const .tabularFigures()]),
-                ),
-              ],
-            ),
-            Expanded(
-              child: Align(
-                alignment: .centerRight,
-                child: _AddClipButton(
-                  onTap: selectedClipIds.isNotEmpty ? onCreate : context.pop,
-                  enable: selectedClipIds.isNotEmpty,
-                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-        const SizedBox(height: 16),
+        const Divider(
+          height: 2,
+          thickness: 2,
+          color: VineTheme.outlinedDisabled,
+        ),
       ],
     );
   }
