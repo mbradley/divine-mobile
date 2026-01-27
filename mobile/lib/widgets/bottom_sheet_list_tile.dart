@@ -42,10 +42,10 @@ class BottomSheetListTile extends StatelessWidget {
       iconColor: effectiveColor,
       textColor: effectiveColor,
       enabled: onTap != null,
-      minTileHeight: 64,
+      minTileHeight: 56,
       leading: SizedBox(
-        height: 32,
-        width: 32,
+        height: 24,
+        width: 24,
         child: SvgPicture.asset(
           iconPath,
           colorFilter: ColorFilter.mode(effectiveColor, BlendMode.srcIn),
@@ -54,11 +54,11 @@ class BottomSheetListTile extends StatelessWidget {
       title: Text(
         title,
         style: const TextStyle(
+          fontSize: 18,
           fontFamily: 'BricolageGrotesque',
-          fontSize: 24,
-          fontWeight: .w700,
+          fontWeight: FontWeight.w800,
           height: 1.33,
-          letterSpacing: 0,
+          letterSpacing: 0.15,
         ),
         maxLines: 1,
         overflow: .ellipsis,

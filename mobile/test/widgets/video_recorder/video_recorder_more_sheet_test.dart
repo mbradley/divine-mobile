@@ -39,24 +39,6 @@ void main() {
       expect(safeArea, findsOneWidget);
     });
 
-    testWidgets('displays "Add clip from Library" option', (tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(home: Scaffold(body: VideoRecorderMoreSheet())),
-        ),
-      );
-
-      expect(find.text('Add clip from Library'), findsOneWidget);
-      expect(
-        find.byWidgetPredicate(
-          (widget) =>
-              widget is BottomSheetListTile &&
-              widget.title == 'Add clip from Library',
-        ),
-        findsOneWidget,
-      );
-    });
-
     testWidgets('displays "Save clip to Library" option', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
@@ -121,25 +103,6 @@ void main() {
       // Remove and Clear actions should be present
       expect(find.text('Remove last clip'), findsOneWidget);
       expect(find.text('Clear all clips'), findsOneWidget);
-    });
-
-    testWidgets('Add clip option is always enabled', (tester) async {
-      /* TODO(@hm21): Temporary "commented out" create PR with only new files
-      await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(home: Scaffold(body: VideoRecorderMoreSheet())),
-        ),
-      );
-
-      final addClipTile = tester.widget<BottomSheetListTile>(
-        find.byWidgetPredicate(
-          (widget) =>
-              widget is BottomSheetListTile &&
-              widget.title == 'Add clip from Library',
-        ),
-      );
-
-      expect(addClipTile.onTap, isNotNull); */
     });
 
     testWidgets('Save option is initially disabled when no clips', (

@@ -162,7 +162,10 @@ class _ThumbnailState extends State<_Thumbnail> {
         }
 
         if ((snapshot.data ?? false) && widget.clip.thumbnailPath != null) {
-          return Image.file(File(widget.clip.thumbnailPath!), fit: .cover);
+          return Hero(
+            tag: 'Video-Clip-Preview-${widget.clip.id}',
+            child: Image.file(File(widget.clip.thumbnailPath!), fit: .cover),
+          );
         }
 
         return const Icon(Icons.videocam, color: Colors.grey, size: 32);
