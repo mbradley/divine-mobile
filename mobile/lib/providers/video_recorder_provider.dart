@@ -125,7 +125,9 @@ class VideoRecorderNotifier extends Notifier<VideoRecorderProviderState> {
     // If the user has recorded clips in the clip manager, we use this
     // aspect-ratio to prevent mixing different ratios.
     final clips = ref.read(clipManagerProvider).clips;
-    updateState(aspectRatio: clips.isNotEmpty ? clips.first.aspectRatio : null);
+    updateState(
+      aspectRatio: clips.isNotEmpty ? clips.first.targetAspectRatio : null,
+    );
 
     Log.info(
       '✅ Video recorder initialized successfully',
@@ -446,7 +448,8 @@ class VideoRecorderNotifier extends Notifier<VideoRecorderProviderState> {
     /// Add the recorded clip to ClipManager
     final clip = clipProvider.addClip(
       video: videoResult,
-      aspectRatio: state.aspectRatio,
+      originalAspectRatio: _cameraService.cameraAspectRatio,
+      targetAspectRatio: state.aspectRatio,
     );
 
     Log.info(
@@ -468,21 +471,26 @@ class VideoRecorderNotifier extends Notifier<VideoRecorderProviderState> {
     );
 
     // Generate and attach thumbnail
-    final thumbnailPath = await VideoThumbnailService.extractThumbnail(
-      videoPath: await videoResult.safeFilePath(),
-      timestamp: Duration(
-        // Use the middle of remaining duration if video is
-        // shorter than remaining time (clip was trimmed), otherwise use default
-        // 210ms which is typically the first keyframe in most MP4 videos
-        milliseconds: remainingMs <= metadata.duration.inMilliseconds
-            ? remainingMs ~/ 2
-            : 210,
-      ),
+    final targetTimestamp = Duration(
+      // Use the middle of remaining duration if video is
+      // shorter than remaining time (clip was trimmed), otherwise use default
+      // 210ms which is typically the first keyframe in most MP4 videos
+      milliseconds: remainingMs <= metadata.duration.inMilliseconds
+          ? remainingMs ~/ 2
+          : 210,
     );
-    if (thumbnailPath != null) {
-      clipProvider.updateThumbnail(clip.id, thumbnailPath);
+    final thumbnailResult = await VideoThumbnailService.extractThumbnail(
+      videoPath: await videoResult.safeFilePath(),
+      targetTimestamp: targetTimestamp,
+    );
+    if (thumbnailResult != null) {
+      clipProvider.updateThumbnail(
+        clipId: clip.id,
+        thumbnailPath: thumbnailResult.path,
+        thumbnailTimestamp: thumbnailResult.timestamp,
+      );
       Log.debug(
-        '🖼️  Thumbnail generated: $thumbnailPath',
+        '🖼️  Thumbnail generated: ${thumbnailResult.path}',
         name: 'VideoRecorderNotifier',
         category: .video,
       );
