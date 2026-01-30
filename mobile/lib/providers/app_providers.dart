@@ -375,7 +375,8 @@ NostrKeyManager nostrKeyManager(Ref ref) {
 }
 
 /// Profile cache service for persistent profile storage
-@riverpod
+/// keepAlive to avoid expensive Hive reinitialization on auth state changes
+@Riverpod(keepAlive: true)
 ProfileCacheService profileCacheService(Ref ref) {
   final service = ProfileCacheService();
   // Initialize asynchronously to avoid blocking UI
@@ -386,6 +387,9 @@ ProfileCacheService profileCacheService(Ref ref) {
       error: e,
     );
   });
+
+  ref.onDispose(() => service.dispose());
+
   return service;
 }
 
