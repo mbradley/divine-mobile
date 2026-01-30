@@ -6,7 +6,7 @@
 import 'dart:async' as _i8;
 import 'dart:ui' as _i12;
 
-import 'package:keycast_flutter/keycast_flutter.dart' as _i18;
+import 'package:keycast_flutter/keycast_flutter.dart' as _i20;
 import 'package:likes_repository/likes_repository.dart' as _i3;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i7;
@@ -17,9 +17,12 @@ import 'package:nostr_sdk/nostr_sdk.dart' as _i9;
 import 'package:openvine/services/age_verification_service.dart' as _i14;
 import 'package:openvine/services/analytics_api_service.dart' as _i5;
 import 'package:openvine/services/auth_service.dart' as _i4;
+import 'package:openvine/services/blossom_server_discovery_service.dart'
+    as _i18;
 import 'package:openvine/services/content_blocklist_service.dart' as _i13;
+import 'package:openvine/services/relay_discovery_service.dart' as _i17;
 import 'package:openvine/services/social_service.dart' as _i16;
-import 'package:openvine/services/user_profile_service.dart' as _i17;
+import 'package:openvine/services/user_profile_service.dart' as _i19;
 import 'package:openvine/services/video_event_service.dart' as _i10;
 import 'package:openvine/services/video_filter_builder.dart' as _i15;
 
@@ -325,6 +328,14 @@ class MockNostrClient extends _i1.Mock implements _i6.NostrClient {
             returnValue: _i8.Future<bool>.value(false),
           )
           as _i8.Future<bool>);
+
+  @override
+  _i8.Future<int> addRelays(List<String>? relayUrls) =>
+      (super.noSuchMethod(
+            Invocation.method(#addRelays, [relayUrls]),
+            returnValue: _i8.Future<int>.value(0),
+          )
+          as _i8.Future<int>);
 
   @override
   _i8.Future<bool> removeRelay(String? relayUrl) =>
@@ -1676,6 +1687,38 @@ class MockAuthService extends _i1.Mock implements _i4.AuthService {
           as bool);
 
   @override
+  List<_i17.DiscoveredRelay> get userRelays =>
+      (super.noSuchMethod(
+            Invocation.getter(#userRelays),
+            returnValue: <_i17.DiscoveredRelay>[],
+          )
+          as List<_i17.DiscoveredRelay>);
+
+  @override
+  bool get hasExistingProfile =>
+      (super.noSuchMethod(
+            Invocation.getter(#hasExistingProfile),
+            returnValue: false,
+          )
+          as bool);
+
+  @override
+  List<_i18.DiscoveredBlossomServer> get userBlossomServers =>
+      (super.noSuchMethod(
+            Invocation.getter(#userBlossomServers),
+            returnValue: <_i18.DiscoveredBlossomServer>[],
+          )
+          as List<_i18.DiscoveredBlossomServer>);
+
+  @override
+  bool get hasUserBlossomServers =>
+      (super.noSuchMethod(
+            Invocation.getter(#hasUserBlossomServers),
+            returnValue: false,
+          )
+          as bool);
+
+  @override
   Map<String, dynamic> get userStats =>
       (super.noSuchMethod(
             Invocation.getter(#userStats),
@@ -1789,7 +1832,7 @@ class MockAuthService extends _i1.Mock implements _i4.AuthService {
 
   @override
   _i8.Future<void> refreshCurrentProfile(
-    _i17.UserProfileService? userProfileService,
+    _i19.UserProfileService? userProfileService,
   ) =>
       (super.noSuchMethod(
             Invocation.method(#refreshCurrentProfile, [userProfileService]),
@@ -1808,7 +1851,7 @@ class MockAuthService extends _i1.Mock implements _i4.AuthService {
           as _i8.Future<void>);
 
   @override
-  _i8.Future<void> signInWithDivineOAuth(_i18.KeycastSession? session) =>
+  _i8.Future<void> signInWithDivineOAuth(_i20.KeycastSession? session) =>
       (super.noSuchMethod(
             Invocation.method(#signInWithDivineOAuth, [session]),
             returnValue: _i8.Future<void>.value(),
