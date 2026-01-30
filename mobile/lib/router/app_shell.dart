@@ -228,21 +228,18 @@ class AppShell extends ConsumerWidget {
     String semanticIdentifier,
   ) {
     final isSelected = currentIndex == tabIndex;
-    final iconColor = isSelected ? Colors.white : VineTheme.tabIconInactive;
 
     return Semantics(
       identifier: semanticIdentifier,
       child: GestureDetector(
         onTap: () => _handleTabTap(context, ref, tabIndex),
-        child: Container(
-          width: 48,
-          height: 48,
-          padding: const EdgeInsets.all(8),
-          child: SvgPicture.asset(
-            iconPath,
-            width: 32,
-            height: 32,
-            colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
+        child: Opacity(
+          opacity: isSelected ? 1.0 : 0.5,
+          child: Container(
+            width: 48,
+            height: 48,
+            padding: const EdgeInsets.all(8),
+            child: SvgPicture.asset(iconPath, width: 32, height: 32),
           ),
         ),
       ),
@@ -346,10 +343,6 @@ class AppShell extends ConsumerWidget {
                     'assets/icon/CaretLeft.svg',
                     width: 32,
                     height: 32,
-                    colorFilter: const ColorFilter.mode(
-                      Colors.white,
-                      BlendMode.srcIn,
-                    ),
                   ),
                 ),
                 onPressed: () {
@@ -488,10 +481,6 @@ class AppShell extends ConsumerWidget {
                       'assets/icon/menu.svg',
                       width: 32,
                       height: 32,
-                      colorFilter: const ColorFilter.mode(
-                        Colors.white,
-                        BlendMode.srcIn,
-                      ),
                     ),
                   ),
                   onPressed: () {
@@ -532,10 +521,6 @@ class AppShell extends ConsumerWidget {
                       'assets/icon/search.svg',
                       width: 32,
                       height: 32,
-                      colorFilter: const ColorFilter.mode(
-                        Colors.white,
-                        BlendMode.srcIn,
-                      ),
                     ),
                   ),
                   onPressed: () {
