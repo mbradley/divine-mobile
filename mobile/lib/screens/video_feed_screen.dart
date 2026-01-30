@@ -11,9 +11,9 @@ import 'package:openvine/mixins/async_value_ui_helpers_mixin.dart';
 import 'package:openvine/mixins/pagination_mixin.dart';
 import 'package:openvine/mixins/video_prefetch_mixin.dart';
 import 'package:models/models.dart' hide LogCategory;
+import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/home_feed_provider.dart';
 import 'package:openvine/providers/individual_video_providers.dart';
-import 'package:openvine/providers/social_providers.dart' as social;
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/explore_screen.dart';
 import 'package:openvine/screens/home_screen_router.dart';
@@ -359,7 +359,6 @@ class _VideoFeedScreenState extends ConsumerState<VideoFeedScreen>
       category: LogCategory.ui,
     );
 
-    // VideoFeedScreen is now a body widget - parent handles Scaffold
     return _buildBody();
   }
 
@@ -427,14 +426,13 @@ class _VideoFeedScreenState extends ConsumerState<VideoFeedScreen>
 
   Widget _buildEmptyState() {
     // Check if user is following anyone to show appropriate message
-    final socialData = ref.watch(social.socialProvider);
-    final isFollowingAnyone = socialData.followingPubkeys.isNotEmpty;
+    final followRepository = ref.watch(followRepositoryProvider);
+    final isFollowingAnyone = (followRepository?.followingCount ?? 0) > 0;
 
     Log.info(
       '🔍 VideoFeedScreen: Empty state - '
       'isFollowingAnyone=$isFollowingAnyone, '
-      'socialInitialized=${socialData.isInitialized}, '
-      'followingCount=${socialData.followingPubkeys.length}',
+      'followingCount=${followRepository?.followingCount ?? 0}',
       name: 'VideoFeedScreen',
       category: LogCategory.ui,
     );
