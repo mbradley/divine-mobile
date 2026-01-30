@@ -1,5 +1,8 @@
 appId: co.openvine.app
 ---
+- assertVisible:
+    id: play_button
+
 #Icons to the right
 - assertVisible:
     id: report_button
