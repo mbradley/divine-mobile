@@ -2,6 +2,8 @@
 // ABOUTME: Each video gets its own controller with automatic lifecycle management via autoDispose
 
 import 'dart:async';
+import 'dart:io' show Platform;
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:video_player/video_player.dart';
@@ -10,7 +12,10 @@ import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/services/video_cache_manager.dart';
 import 'package:openvine/services/broken_video_tracker.dart'
     show BrokenVideoTracker;
+import 'package:openvine/services/bandwidth_tracker_service.dart';
+import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:models/models.dart' show VideoEvent;
 
 part 'individual_video_providers.g.dart';
 
@@ -143,12 +148,23 @@ class VideoControllerParams {
   const VideoControllerParams({
     required this.videoId,
     required this.videoUrl,
+    this.cacheUrl,
     this.videoEvent,
   });
 
   final String videoId;
+
+  /// URL for playback (may be HLS on Android for codec compatibility)
   final String videoUrl;
+
+  /// URL for caching (original MP4 - HLS can't be cached as single file)
+  /// If null, uses videoUrl for caching.
+  final String? cacheUrl;
+
   final dynamic videoEvent; // VideoEvent for enhanced error reporting
+
+  /// Get the URL to use for caching (prefers cacheUrl, falls back to videoUrl)
+  String get effectiveCacheUrl => cacheUrl ?? videoUrl;
 
   @override
   bool operator ==(Object other) =>
@@ -163,7 +179,7 @@ class VideoControllerParams {
 
   @override
   String toString() =>
-      'VideoControllerParams(videoId: $videoId, videoUrl: $videoUrl, hasEvent: ${videoEvent != null})';
+      'VideoControllerParams(videoId: $videoId, videoUrl: $videoUrl, cacheUrl: $cacheUrl, hasEvent: ${videoEvent != null})';
 }
 
 /// Loading state for individual videos
@@ -476,10 +492,25 @@ VideoPlayerController individualVideoController(
     }
   }
 
+  // Track time-to-first-frame for bandwidth-based quality selection
+  final initStartTime = DateTime.now();
+
   final initFuture = initializeWithRetry();
 
   initFuture
       .then((_) {
+        // Record time-to-first-frame for bandwidth tracking
+        // This helps select appropriate quality (720p vs 480p) for future videos
+        final ttffMs = DateTime.now().difference(initStartTime).inMilliseconds;
+        if (ttffMs > 0) {
+          bandwidthTracker.recordTimeToFirstFrame(ttffMs);
+          Log.debug(
+            '📊 Recorded TTFF: ${ttffMs}ms for bandwidth tracking',
+            name: 'IndividualVideoController',
+            category: LogCategory.video,
+          );
+        }
+
         final initialPosition = controller.value.position;
         final initialSize = controller.value.size;
 
@@ -616,6 +647,14 @@ VideoPlayerController individualVideoController(
               '\n⚠️  No Nostr event details available (consider passing videoEvent to VideoControllerParams)';
         }
 
+        // Add Android device info for codec-related errors
+        // This helps diagnose hardware decoder issues on specific devices
+        if (!kIsWeb && Platform.isAndroid && _isCodecError(errorMessage)) {
+          logMessage += '\n📱 Android Device Info (codec error detected):';
+          // Device info is async, so we log it separately
+          _logAndroidDeviceInfo(params.videoId, errorMessage);
+        }
+
         Log.error(
           logMessage,
           name: 'IndividualVideoController',
@@ -687,6 +726,47 @@ VideoPlayerController individualVideoController(
                   category: LogCategory.video,
                 );
               });
+        } else if (_isCodecError(errorMessage) &&
+            !kIsWeb &&
+            Platform.isAndroid &&
+            ref.mounted) {
+          // Android codec error - try HLS fallback with H.264 Baseline Profile
+          final currentFallbackCache = ref.read(fallbackUrlCacheProvider);
+          final alreadyUsedFallback = currentFallbackCache.containsKey(
+            params.videoId,
+          );
+
+          if (!alreadyUsedFallback && params.videoEvent is VideoEvent) {
+            // Cast to VideoEvent to use the extension method
+            final videoEvent = params.videoEvent as VideoEvent;
+            final hlsFallback = videoEvent.getHlsFallbackUrl();
+
+            if (hlsFallback != null) {
+              // Store HLS URL as fallback for retry
+              final newCache = {...currentFallbackCache};
+              newCache[params.videoId] = hlsFallback;
+              ref.read(fallbackUrlCacheProvider.notifier).state = newCache;
+
+              Log.info(
+                '📱 Android codec error - stored HLS fallback for retry: $hlsFallback',
+                name: 'IndividualVideoController',
+                category: LogCategory.video,
+              );
+
+              // Cancel loop timer and invalidate to trigger retry with HLS
+              loopEnforcementTimer?.cancel();
+              if (ref.mounted) {
+                ref.invalidateSelf();
+              }
+              return;
+            } else {
+              Log.warning(
+                '📱 Android codec error but no HLS fallback available (non-Divine video)',
+                name: 'IndividualVideoController',
+                category: LogCategory.video,
+              );
+            }
+          }
         } else if (_isVideoError(errorMessage) && ref.mounted) {
           // Check if we can try a fallback URL before marking as broken
           final currentFallbackCache = ref.read(fallbackUrlCacheProvider);
@@ -1024,8 +1104,10 @@ Future<dynamic> _cacheVideoWithAuth(
   }
 
   // Cache video with optional auth headers
+  // Use effectiveCacheUrl (original MP4) not videoUrl (may be HLS on Android)
+  // HLS manifests can't be cached as single files
   return videoCache.cacheVideo(
-    params.videoUrl,
+    params.effectiveCacheUrl,
     params.videoId,
     brokenVideoTracker: tracker,
     authHeaders: authHeaders,
@@ -1061,6 +1143,60 @@ bool _isVideoError(String errorMessage) {
       lowerError.contains('connection refused') ||
       lowerError.contains('network error') ||
       lowerError.contains('video initialization timed out');
+}
+
+/// Check if error indicates Android codec/decoder failure
+///
+/// These errors typically occur when hardware decoders cannot handle
+/// certain video formats (e.g., H.264 High Profile at high resolutions
+/// on Motorola, Huawei, OnePlus devices).
+bool _isCodecError(String errorMessage) {
+  final lowerError = errorMessage.toLowerCase();
+  return lowerError.contains('mediacodec') ||
+      lowerError.contains('decoder init failed') ||
+      lowerError.contains('no_exceeds_capabilities') ||
+      lowerError.contains('omx.') ||
+      lowerError.contains('format_supported=no') ||
+      lowerError.contains('codec') ||
+      lowerError.contains('unsupported video format') ||
+      lowerError.contains('decoder') ||
+      lowerError.contains('video format');
+}
+
+/// Log Android device info for codec-related errors
+///
+/// This helps diagnose which devices have hardware decoder limitations.
+Future<void> _logAndroidDeviceInfo(String videoId, String errorMessage) async {
+  try {
+    final deviceInfo = DeviceInfoPlugin();
+    final androidInfo = await deviceInfo.androidInfo;
+
+    final deviceInfoLog =
+        '''
+📱 Android Device Info for video $videoId:
+   • Model: ${androidInfo.model}
+   • Manufacturer: ${androidInfo.manufacturer}
+   • Android Version: ${androidInfo.version.release}
+   • SDK Level: ${androidInfo.version.sdkInt}
+   • Brand: ${androidInfo.brand}
+   • Device: ${androidInfo.device}
+   • Hardware: ${androidInfo.hardware}
+   • 64-bit ABIs: ${androidInfo.supported64BitAbis}
+   • 32-bit ABIs: ${androidInfo.supported32BitAbis}
+   • Error: $errorMessage''';
+
+    Log.warning(
+      deviceInfoLog,
+      name: 'AndroidCodecDiagnostics',
+      category: LogCategory.video,
+    );
+  } catch (e) {
+    Log.warning(
+      '📱 Failed to get Android device info: $e',
+      name: 'AndroidCodecDiagnostics',
+      category: LogCategory.video,
+    );
+  }
 }
 
 /// Provider for video loading state
