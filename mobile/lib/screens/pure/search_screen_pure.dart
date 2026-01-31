@@ -9,7 +9,10 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:models/models.dart' hide LogCategory;
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/route_feed_providers.dart';
+import 'package:openvine/services/content_blocklist_service.dart';
+import 'package:openvine/services/user_profile_service.dart';
 import 'package:openvine/router/page_context_provider.dart';
 import 'package:openvine/screens/hashtag_screen_router.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
@@ -70,8 +73,10 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
 
   bool _isSearching = false;
   bool _isSearchingExternal = false;
+  bool _isSearchingWebSocket = false; // Track WebSocket search phase separately
   String _currentQuery = '';
   Timer? _debounceTimer;
+  int _searchGeneration = 0; // Prevents race conditions between search phases
 
   @override
   void initState() {
@@ -240,97 +245,224 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
     }
   }
 
-  /// Search external relays for more results (user-initiated)
+  /// Search external sources for more results
+  ///
+  /// Strategy: Try Funnelcake REST API first (fast), then WebSocket NIP-50 (slower)
+  /// Results flow incrementally - REST results appear first, WS results merge in
+  ///
+  /// Uses a generation counter to prevent race conditions when queries change
+  /// mid-search - stale results from old queries are discarded.
   Future<void> _searchExternalRelays() async {
     if (_currentQuery.isEmpty || _isSearchingExternal) return;
+
+    // Increment generation to invalidate any in-flight searches
+    final generation = ++_searchGeneration;
 
     setState(() {
       _isSearchingExternal = true;
     });
 
+    final querySnapshot = _currentQuery;
+    final blocklistService = ref.read(contentBlocklistServiceProvider);
+    final profileService = ref.read(userProfileServiceProvider);
+
+    // Helper to check if this search is still valid
+    bool isSearchStale() => !mounted || _searchGeneration != generation;
+
+    // Check if Funnelcake REST API is available
+    final funnelcakeAvailable =
+        ref.read(funnelcakeAvailableProvider).asData?.value ?? false;
+
     Log.info(
-      '🔍 SearchScreenPure: Searching external relays for: $_currentQuery',
+      '🔍 SearchScreenPure: External search for "$querySnapshot" '
+      '(funnelcake: $funnelcakeAvailable)',
       category: LogCategory.video,
     );
 
-    try {
-      final videoEventService = ref.read(videoEventServiceProvider);
-      final blocklistService = ref.read(contentBlocklistServiceProvider);
+    // ===== PHASE 1: Funnelcake REST API (fast) =====
+    if (funnelcakeAvailable) {
+      try {
+        final analyticsService = ref.read(analyticsApiServiceProvider);
 
-      // Search external relays via NIP-50
-      await videoEventService.searchVideos(_currentQuery, limit: 100);
+        Log.debug(
+          '🔍 SearchScreenPure: Trying Funnelcake REST search...',
+          category: LogCategory.video,
+        );
 
-      // Filter out blocked users from remote results
-      final remoteResults = videoEventService.searchResults
-          .where(
-            (video) => !blocklistService.shouldFilterFromFeeds(video.pubkey),
-          )
-          .toList();
+        final restResults = await analyticsService.searchVideos(
+          query: querySnapshot,
+          limit: 100,
+        );
 
-      final profileService = ref.read(userProfileServiceProvider);
-      await profileService.searchUsers(_currentQuery, limit: 100);
+        // Filter out blocked users
+        final filteredRestResults = restResults
+            .where(
+              (video) => !blocklistService.shouldFilterFromFeeds(video.pubkey),
+            )
+            .toList();
 
-      // Use fuzzy search and filter out blocked users
-      final matchingRemoteUsers = SearchUtils.searchProfiles(
-        _currentQuery,
-        profileService.allProfiles.values.where(
-          (p) => !blocklistService.shouldFilterFromFeeds(p.pubkey),
-        ),
-        minScore: 0.3,
-        limit: 50,
-      ).map((p) => p.pubkey).toList();
+        if (filteredRestResults.isNotEmpty && !isSearchStale()) {
+          // Merge REST results with local results
+          _mergeAndUpdateResults(
+            newVideos: filteredRestResults,
+            blocklistService: blocklistService,
+            profileService: profileService,
+            querySnapshot: querySnapshot,
+            generation: generation,
+          );
 
-      final allVideos = [..._videoResults, ...remoteResults];
-
-      final seenIds = <String>{};
-      final uniqueVideos = allVideos.where((video) {
-        if (seenIds.contains(video.id)) return false;
-        seenIds.add(video.id);
-        return true;
-      }).toList();
-
-      uniqueVideos.sort(VideoEvent.compareByLoopsThenTime);
-
-      final allHashtags = <String>{};
-      final allUsers = <String>{..._userResults, ...matchingRemoteUsers};
-
-      for (final video in uniqueVideos) {
-        for (final tag in video.hashtags) {
-          if (tag.toLowerCase().contains(_currentQuery.toLowerCase())) {
-            allHashtags.add(tag);
-          }
+          Log.info(
+            '🔍 SearchScreenPure: REST search returned '
+            '${filteredRestResults.length} results',
+            category: LogCategory.video,
+          );
         }
-        if (!blocklistService.shouldFilterFromFeeds(video.pubkey)) {
-          allUsers.add(video.pubkey);
-        }
-      }
-
-      if (mounted) {
-        setState(() {
-          _videoResults = uniqueVideos;
-          _hashtagResults = allHashtags.take(20).toList();
-          _userResults = allUsers.take(20).toList();
-          _isSearchingExternal = false;
-        });
-        ref.read(searchScreenVideosProvider.notifier).state = uniqueVideos;
-      }
-
-      Log.info(
-        '🔍 SearchScreenPure: External search complete: ${remoteResults.length} new results (total: ${uniqueVideos.length})',
-        category: LogCategory.video,
-      );
-    } catch (e) {
-      Log.error(
-        '🔍 SearchScreenPure: External search failed: $e',
-        category: LogCategory.video,
-      );
-
-      if (mounted) {
-        setState(() {
-          _isSearchingExternal = false;
-        });
+      } catch (e) {
+        Log.warning(
+          '🔍 SearchScreenPure: REST search failed, continuing to WebSocket: $e',
+          category: LogCategory.video,
+        );
       }
     }
+
+    // ===== PHASE 2: WebSocket NIP-50 search (slower, more comprehensive) =====
+    // Always run WebSocket search to catch results not in Funnelcake
+    if (!isSearchStale()) {
+      setState(() {
+        _isSearchingWebSocket = true;
+      });
+
+      try {
+        final videoEventService = ref.read(videoEventServiceProvider);
+
+        Log.debug(
+          '🔍 SearchScreenPure: Starting WebSocket NIP-50 search...',
+          category: LogCategory.video,
+        );
+
+        // Search external relays via NIP-50
+        await videoEventService.searchVideos(querySnapshot, limit: 100);
+
+        final wsResults = videoEventService.searchResults
+            .where(
+              (video) => !blocklistService.shouldFilterFromFeeds(video.pubkey),
+            )
+            .toList();
+
+        // Also search for users via WebSocket
+        await profileService.searchUsers(querySnapshot, limit: 100);
+
+        // Use fuzzy search and filter out blocked users
+        final matchingRemoteUsers = SearchUtils.searchProfiles(
+          querySnapshot,
+          profileService.allProfiles.values.where(
+            (p) => !blocklistService.shouldFilterFromFeeds(p.pubkey),
+          ),
+          minScore: 0.3,
+          limit: 50,
+        ).map((p) => p.pubkey).toList();
+
+        if (!isSearchStale()) {
+          // Merge WebSocket results
+          _mergeAndUpdateResults(
+            newVideos: wsResults,
+            newUsers: matchingRemoteUsers,
+            blocklistService: blocklistService,
+            profileService: profileService,
+            querySnapshot: querySnapshot,
+            generation: generation,
+          );
+
+          Log.info(
+            '🔍 SearchScreenPure: WebSocket search returned '
+            '${wsResults.length} results',
+            category: LogCategory.video,
+          );
+        }
+      } catch (e) {
+        // Use warning level since this is recoverable - partial results may exist
+        Log.warning(
+          '🔍 SearchScreenPure: WebSocket search failed: $e',
+          category: LogCategory.video,
+        );
+      }
+    }
+
+    // ===== Complete =====
+    if (mounted) {
+      setState(() {
+        _isSearchingExternal = false;
+        _isSearchingWebSocket = false;
+      });
+
+      Log.info(
+        '🔍 SearchScreenPure: External search complete '
+        '(total: ${_videoResults.length} videos)',
+        category: LogCategory.video,
+      );
+    }
+  }
+
+  /// Merge new results with existing results and update UI
+  ///
+  /// Uses generation counter to ensure we don't update UI with stale results
+  /// from a previous search that completed after the user changed queries.
+  void _mergeAndUpdateResults({
+    required List<VideoEvent> newVideos,
+    List<String>? newUsers,
+    required ContentBlocklistService blocklistService,
+    required UserProfileService profileService,
+    required String querySnapshot,
+    required int generation,
+  }) {
+    // Check if this search is still valid before updating
+    if (!mounted || _searchGeneration != generation) {
+      Log.debug(
+        '🔍 SearchScreenPure: Discarding stale results for "$querySnapshot"',
+        category: LogCategory.video,
+      );
+      return;
+    }
+
+    // Combine existing + new results
+    final allVideos = [..._videoResults, ...newVideos];
+
+    // Deduplicate by video ID
+    final seenIds = <String>{};
+    final uniqueVideos = allVideos.where((video) {
+      if (seenIds.contains(video.id)) return false;
+      seenIds.add(video.id);
+      return true;
+    }).toList();
+
+    // Sort: by loops then time
+    uniqueVideos.sort(VideoEvent.compareByLoopsThenTime);
+
+    // Extract all unique hashtags and users from combined results
+    final allHashtags = <String>{};
+    final allUsers = <String>{..._userResults};
+    if (newUsers != null) {
+      allUsers.addAll(newUsers);
+    }
+
+    for (final video in uniqueVideos) {
+      for (final tag in video.hashtags) {
+        if (tag.toLowerCase().contains(querySnapshot.toLowerCase())) {
+          allHashtags.add(tag);
+        }
+      }
+      if (!blocklistService.shouldFilterFromFeeds(video.pubkey)) {
+        allUsers.add(video.pubkey);
+      }
+    }
+
+    setState(() {
+      _videoResults = uniqueVideos;
+      _hashtagResults = allHashtags.take(20).toList();
+      _userResults = allUsers.take(20).toList();
+    });
+    // Update provider so active video system can access merged search results
+    ref.read(searchScreenVideosProvider.notifier).state = uniqueVideos;
   }
 
   @override
@@ -541,7 +673,9 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'Searching Nostr relays...',
+                        _isSearchingWebSocket
+                            ? 'Searching Nostr relays...'
+                            : 'Searching servers...',
                         style: TextStyle(
                           color: VineTheme.whiteText,
                           fontSize: 14,
@@ -550,7 +684,7 @@ class _SearchScreenPureState extends ConsumerState<SearchScreenPure>
                       ),
                       if (_videoResults.isNotEmpty)
                         Text(
-                          '${_videoResults.length} local results found',
+                          '${_videoResults.length} results found',
                           style: TextStyle(
                             color: VineTheme.secondaryText,
                             fontSize: 12,
