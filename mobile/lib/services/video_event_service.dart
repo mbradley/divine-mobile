@@ -43,6 +43,7 @@ import 'package:openvine/services/video_filter_builder.dart';
 import 'package:openvine/utils/log_batcher.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/services/repost_resolver.dart';
+import 'package:openvine/repositories/video_repository.dart';
 
 /// Pagination state for tracking cursor position and loading status per subscription
 class PaginationState {
@@ -67,7 +68,8 @@ class PaginationState {
   }
 
   void markEventSeen(String eventId) {
-    seenEventIds.add(eventId);
+    // Normalize ID to lowercase for case-insensitive deduplication
+    seenEventIds.add(eventId.toLowerCase());
   }
 
   void startQuery() {
@@ -119,10 +121,12 @@ class VideoEventService extends ChangeNotifier {
   VideoEventService(
     this._nostrService, {
     required SubscriptionManager subscriptionManager,
+    required VideoRepository videoRepository,
     UserProfileService? userProfileService,
     EventRouter? eventRouter,
     VideoFilterBuilder? videoFilterBuilder,
   }) : _subscriptionManager = subscriptionManager,
+       _videoRepository = videoRepository,
        _userProfileService = userProfileService,
        _eventRouter = eventRouter,
        _videoFilterBuilder = videoFilterBuilder {
@@ -130,6 +134,7 @@ class VideoEventService extends ChangeNotifier {
     _initializeRepostResolver();
   }
   final NostrClient _nostrService;
+  final VideoRepository _videoRepository;
   late final RepostResolver _repostResolver;
   final UserProfileService? _userProfileService;
   final EventRouter? _eventRouter;
@@ -436,9 +441,18 @@ class VideoEventService extends ChangeNotifier {
   }
 
   /// Find cached video by event ID across all subscription lists
+  /// Uses case-insensitive matching for consistency with normalized IDs
   VideoEvent? _findCachedVideoById(String eventId) {
+    // First try VideoRepository for centralized lookup
+    final repoMatch = _videoRepository.getVideoById(eventId);
+    if (repoMatch != null) return repoMatch;
+
+    // Fall back to event lists for backward compatibility
+    final normalizedId = eventId.toLowerCase();
     for (final events in _eventLists.values) {
-      final match = events.where((v) => v.id == eventId).firstOrNull;
+      final match = events
+          .where((v) => v.id.toLowerCase() == normalizedId)
+          .firstOrNull;
       if (match != null) return match;
     }
     return null;
@@ -657,7 +671,9 @@ class VideoEventService extends ChangeNotifier {
   /// Check if a video has been locally deleted
   /// Used to filter out deleted videos from pagination results
   bool isVideoLocallyDeleted(String videoId) {
-    return _locallyDeletedVideoIds.contains(videoId);
+    // Delegate to VideoRepository for centralized tracking
+    return _videoRepository.isVideoLocallyDeleted(videoId) ||
+        _locallyDeletedVideoIds.contains(videoId);
   }
 
   /// Query for all users who have reposted a specific video
@@ -1728,9 +1744,10 @@ class VideoEventService extends ChangeNotifier {
       }
 
       // Fast-path de-duplication before logging and processing
+      // Use case-insensitive ID comparison for consistent deduplication
       final paginationState = _paginationStates[subscriptionType];
       if (paginationState != null) {
-        if (paginationState.seenEventIds.contains(event.id)) {
+        if (paginationState.seenEventIds.contains(event.id.toLowerCase())) {
           return;
         }
         // Mark seen early to prevent repeated logs for the same event (even if later skipped)
@@ -1805,8 +1822,10 @@ class VideoEventService extends ChangeNotifier {
       }
 
       // Check if we already have this event in this subscription type
+      // Use case-insensitive ID comparison for consistent deduplication
       final eventList = _eventLists[subscriptionType] ?? [];
-      if (eventList.any((e) => e.id == event.id)) {
+      final eventIdLower = event.id.toLowerCase();
+      if (eventList.any((e) => e.id.toLowerCase() == eventIdLower)) {
         _duplicateVideoEventCount++;
         _logDuplicateVideoEventsAggregated();
         return;
@@ -2060,9 +2079,10 @@ class VideoEventService extends ChangeNotifier {
 
       final event = eventData;
       // Fast-path de-duplication before logging
+      // Use case-insensitive ID comparison for consistent deduplication
       final paginationState = _paginationStates[subscriptionType];
       if (paginationState != null) {
-        if (paginationState.seenEventIds.contains(event.id)) {
+        if (paginationState.seenEventIds.contains(event.id.toLowerCase())) {
           return;
         }
         paginationState.markEventSeen(event.id);
@@ -2094,8 +2114,10 @@ class VideoEventService extends ChangeNotifier {
       }
 
       // Check if we already have this event in this subscription type
+      // Use case-insensitive ID comparison for consistent deduplication
       final eventList = _eventLists[subscriptionType] ?? [];
-      if (eventList.any((e) => e.id == event.id)) {
+      final historicalEventIdLower = event.id.toLowerCase();
+      if (eventList.any((e) => e.id.toLowerCase() == historicalEventIdLower)) {
         _duplicateVideoEventCount++;
         _logDuplicateVideoEventsAggregated();
         return;
@@ -2315,8 +2337,9 @@ class VideoEventService extends ChangeNotifier {
         final isRepostByAuthor =
             video.isRepost && video.reposterPubkey == pubkey;
 
+        // Use case-insensitive ID comparison for consistent deduplication
         if ((isOriginalByAuthor || isRepostByAuthor) &&
-            !bucket.any((e) => e.id == video.id)) {
+            !bucket.any((e) => e.id.toLowerCase() == video.id.toLowerCase())) {
           bucket.add(video);
         }
       }
@@ -2506,7 +2529,8 @@ class VideoEventService extends ChangeNotifier {
 
     final followingSet = followingPubkeys.toSet();
     final homeFeedList = _eventLists[SubscriptionType.homeFeed] ?? [];
-    final existingIds = homeFeedList.map((v) => v.id).toSet();
+    // Use case-insensitive comparison for Nostr IDs
+    final existingIds = homeFeedList.map((v) => v.id.toLowerCase()).toSet();
     final discoveryVideos = _eventLists[SubscriptionType.discovery] ?? [];
 
     // Find videos in discovery that belong to followed users but aren't in home feed
@@ -2514,7 +2538,7 @@ class VideoEventService extends ChangeNotifier {
         .where(
           (video) =>
               followingSet.contains(video.pubkey) &&
-              !existingIds.contains(video.id),
+              !existingIds.contains(video.id.toLowerCase()),
         )
         .toList();
 
@@ -2598,20 +2622,21 @@ class VideoEventService extends ChangeNotifier {
       }
 
       // Get existing video IDs in home feed for deduplication
+      // Use case-insensitive comparison for Nostr IDs
       final homeFeedList = _eventLists[SubscriptionType.homeFeed] ?? [];
-      final existingIds = homeFeedList.map((v) => v.id).toSet();
+      final existingIds = homeFeedList.map((v) => v.id.toLowerCase()).toSet();
 
       final videosToSeed = <VideoEvent>[];
 
       for (final event in events) {
-        // Skip if already in home feed
-        if (existingIds.contains(event.id)) continue;
+        // Skip if already in home feed (case-insensitive)
+        if (existingIds.contains(event.id.toLowerCase())) continue;
 
         // Check if video exists in other subscription lists
         VideoEvent? existingVideo;
         for (final list in _eventLists.values) {
           existingVideo = list.cast<VideoEvent?>().firstWhere(
-            (v) => v?.id == event.id,
+            (v) => v?.id.toLowerCase() == event.id.toLowerCase(),
             orElse: () => null,
           );
           if (existingVideo != null) break;
@@ -3412,8 +3437,10 @@ class VideoEventService extends ChangeNotifier {
 
         // Check if event has any of the requested hashtags (case-insensitive)
         if (hashtagsLower.any(eventHashtagsLower.contains)) {
-          if (!seenIds.contains(event.id)) {
-            seenIds.add(event.id);
+          // Use normalized ID for case-insensitive deduplication
+          final normalizedEventId = event.id.toLowerCase();
+          if (!seenIds.contains(normalizedEventId)) {
+            seenIds.add(normalizedEventId);
             result.add(event);
             Log.debug(
               '  ✅ Match found: video ${event.id} has hashtags: $eventHashtagsLower',
@@ -3740,9 +3767,11 @@ class VideoEventService extends ChangeNotifier {
     }
 
     // REPOST CONSOLIDATION: Check if this is a repost of an existing video
+    // Use case-insensitive comparison for ID matching
     if (videoEvent.isRepost) {
+      final repostNormalizedId = videoEvent.id.toLowerCase();
       final existingVideoIndex = eventList.indexWhere(
-        (existing) => existing.id == videoEvent.id,
+        (existing) => existing.id.toLowerCase() == repostNormalizedId,
       );
 
       if (existingVideoIndex != -1) {
@@ -3800,15 +3829,25 @@ class VideoEventService extends ChangeNotifier {
       }
     }
 
-    // Check for duplicates within this subscription type
+    // Check for duplicates within this subscription type using case-insensitive comparison
+    // Use VideoRepository for centralized deduplication with normalized IDs
+    final normalizedId = videoEvent.id.toLowerCase();
     final existingIndex = eventList.indexWhere(
-      (existing) => existing.id == videoEvent.id,
+      (existing) => existing.id.toLowerCase() == normalizedId,
     );
     if (existingIndex != -1) {
       _duplicateVideoEventCount++;
       _logDuplicateVideoEventsAggregated();
       return; // Don't add duplicate events
     }
+
+    // Add to VideoRepository for centralized storage with normalized IDs
+    // This enables write-time deduplication and case-insensitive lookups
+    _videoRepository.addVideo(
+      videoEvent,
+      subscriptionType: subscriptionType,
+      isHistorical: isHistorical,
+    );
 
     // Fetch profile for video author if not already cached
     // This uses existing WebSocket connection with REQ command
@@ -3892,7 +3931,9 @@ class VideoEventService extends ChangeNotifier {
 
       for (final tag in videoEvent.hashtags) {
         final bucket = _hashtagBuckets.putIfAbsent(tag, () => []);
-        final wasAdded = !bucket.any((e) => e.id == videoEvent.id);
+        // Use case-insensitive ID matching to prevent duplicates
+        final videoIdLower = videoEvent.id.toLowerCase();
+        final wasAdded = !bucket.any((e) => e.id.toLowerCase() == videoIdLower);
         if (wasAdded) {
           if (isHistorical) {
             bucket.add(videoEvent);
