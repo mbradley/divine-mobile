@@ -742,6 +742,9 @@ class MockNostrClient extends _i1.Mock implements _i3.NostrClient {
   _i8.Future<_i14.Event?> sendLike(
     String? eventId, {
     String? content,
+    String? addressableId,
+    String? targetAuthorPubkey,
+    int? targetKind,
     List<String>? tempRelays,
     List<String>? targetRelays,
   }) =>
@@ -751,6 +754,9 @@ class MockNostrClient extends _i1.Mock implements _i3.NostrClient {
               [eventId],
               {
                 #content: content,
+                #addressableId: addressableId,
+                #targetAuthorPubkey: targetAuthorPubkey,
+                #targetKind: targetKind,
                 #tempRelays: tempRelays,
                 #targetRelays: targetRelays,
               },
