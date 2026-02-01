@@ -239,6 +239,26 @@ class AuthService implements BackgroundAwareService {
     _lastError = null;
   }
 
+  /// Check if there are saved keys on device (without authenticating)
+  ///
+  /// Useful for showing different UI on welcome screen when user has
+  /// previously used the app vs fresh install.
+  Future<bool> hasSavedKeys() async {
+    return _keyStorage.hasKeys();
+  }
+
+  /// Get the saved npub from storage (without authenticating)
+  ///
+  /// Returns null if no keys are saved. Used to show which identity
+  /// will be resumed on welcome screen.
+  Future<String?> getSavedNpub() async {
+    final hasKeys = await _keyStorage.hasKeys();
+    if (!hasKeys) return null;
+
+    final keyContainer = await _keyStorage.getKeyContainer();
+    return keyContainer?.npub;
+  }
+
   /// Initialize the authentication service
   Future<void> initialize() async {
     Log.debug(
