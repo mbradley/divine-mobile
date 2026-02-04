@@ -328,11 +328,7 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
               subtitle: 'Suggest improvements or new features',
               onTap: () {
                 dialogContext.pop();
-                _handleFeatureRequest(
-                  context,
-                  userPubkey,
-                  isZendeskAvailable,
-                );
+                _handleFeatureRequest(context, userPubkey, isZendeskAvailable);
               },
             ),
             const SizedBox(height: 12),
@@ -449,9 +445,7 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
     if (!context.mounted) return;
     showDialog(
       context: context,
-      builder: (context) => FeatureRequestDialog(
-        userPubkey: userPubkey,
-      ),
+      builder: (context) => FeatureRequestDialog(userPubkey: userPubkey),
     );
   }
 }
