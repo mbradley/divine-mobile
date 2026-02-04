@@ -328,8 +328,13 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
               onTap: () async {
                 dialogContext.pop();
                 if (isZendeskAvailable) {
-                  // Ensure identity is set before viewing tickets
-                  await _setZendeskIdentityWithService(userPubkey, userProfile);
+                  // Set JWT identity for ticket list (Zendesk configured for JWT auth)
+                  // Don't set anonymous identity first - causes auth type mismatch
+                  if (userPubkey != null) {
+                    final npub = NostrKeyUtils.encodePubKey(userPubkey);
+                    await ZendeskSupportService.setJwtIdentity(npub);
+                  }
+
                   Log.debug(
                     '💬 Opening Zendesk ticket list',
                     category: LogCategory.ui,
@@ -418,6 +423,7 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
   }
 
   /// Handle bug report submission
+  /// Uses JWT identity for SDK ticket creation (enables View Past Messages)
   Future<void> _handleBugReportWithServices(
     BuildContext context,
     BugReportService bugReportService,
@@ -425,38 +431,16 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
     String? userPubkey,
     bool isZendeskAvailable,
   ) async {
-    // Set Zendesk identity for all paths (native SDK and REST API)
-    await _setZendeskIdentityWithService(userPubkey, userProfile);
-    if (!context.mounted) return;
-
-    if (isZendeskAvailable) {
-      // Get device and app info
-      final packageInfo = await PackageInfo.fromPlatform();
-      if (!context.mounted) return;
-      final appVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
-
-      final description =
-          '''
-Please describe the bug you encountered:
-
----
-App Version: $appVersion
-Platform: ${Theme.of(context).platform.name}
-''';
-
-      Log.debug('🐛 Opening Zendesk for bug report', category: LogCategory.ui);
-      final success = await ZendeskSupportService.showNewTicketScreen(
-        subject: 'Bug Report',
-        description: description,
-        tags: ['mobile', 'bug', 'ios'],
-      );
-
-      if (!success && context.mounted) {
-        _showSupportFallbackWithServices(context, bugReportService, userPubkey);
-      }
-    } else {
-      _showSupportFallbackWithServices(context, bugReportService, userPubkey);
+    // Set JWT identity for SDK ticket creation (Zendesk configured for JWT auth)
+    // Don't set anonymous identity first - causes auth type mismatch
+    if (userPubkey != null) {
+      final npub = NostrKeyUtils.encodePubKey(userPubkey);
+      await ZendeskSupportService.setJwtIdentity(npub);
     }
+
+    // Always use custom dialog for bug reports (supports structured fields)
+    Log.debug('🐛 Opening bug report dialog', category: LogCategory.ui);
+    _showSupportFallbackWithServices(context, bugReportService, userPubkey);
   }
 
   /// Show fallback support options when Zendesk is not available
