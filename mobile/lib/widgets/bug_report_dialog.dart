@@ -32,7 +32,7 @@ class BugReportDialog extends StatefulWidget {
 }
 
 class _BugReportDialogState extends State<BugReportDialog> {
-  final _subjectController = TextEditingController(text: 'Bug Report: ');
+  final _subjectController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _stepsController = TextEditingController();
   final _expectedController = TextEditingController();
@@ -54,7 +54,9 @@ class _BugReportDialogState extends State<BugReportDialog> {
   }
 
   bool get _canSubmit =>
-      !_isSubmitting && _descriptionController.text.trim().isNotEmpty;
+      !_isSubmitting &&
+      _subjectController.text.trim().isNotEmpty &&
+      _descriptionController.text.trim().isNotEmpty;
 
   Future<void> _submitReport() async {
     if (!_canSubmit) return;
@@ -75,8 +77,10 @@ class _BugReportDialogState extends State<BugReportDialog> {
       );
 
       // Submit directly to Zendesk REST API with structured fields
+      // Prefix subject with "fix:" for ticket categorization
+      final subject = 'fix: ${_subjectController.text.trim()}';
       final success = await ZendeskSupportService.createStructuredBugReport(
-        subject: _subjectController.text.trim(),
+        subject: subject,
         description: description,
         stepsToReproduce: _stepsController.text.trim(),
         expectedBehavior: _expectedController.text.trim(),
@@ -174,15 +178,16 @@ class _BugReportDialogState extends State<BugReportDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Subject field
+              // Subject field (required)
               TextField(
                 controller: _subjectController,
                 maxLines: 1,
                 enabled: !_isSubmitting,
                 style: const TextStyle(color: VineTheme.whiteText),
                 decoration: _buildInputDecoration(
-                  label: 'Subject',
+                  label: 'Subject *',
                   hint: 'Brief summary of the issue',
+                  helper: 'Required',
                 ),
                 onChanged: (_) => setState(() {}),
               ),
