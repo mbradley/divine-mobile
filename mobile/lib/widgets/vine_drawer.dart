@@ -392,50 +392,6 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
     );
   }
 
-  /// Set Zendesk user identity from user pubkey using pre-captured service
-  /// This version doesn't use ref, so it works after drawer is closed
-  Future<void> _setZendeskIdentityWithService(
-    String? userPubkey,
-    UserProfile? profile,
-  ) async {
-    if (userPubkey == null) {
-      // Users always have pubkey in this app, but handle edge case gracefully
-      Log.warning(
-        '⚠️ Zendesk: No userPubkey, using baseline anonymous identity',
-        category: LogCategory.system,
-      );
-      return;
-    }
-
-    try {
-      final npub = NostrKeyUtils.encodePubKey(userPubkey);
-
-      Log.debug(
-        '🎫 Zendesk: Setting identity for ${profile?.bestDisplayName ?? npub}',
-        category: LogCategory.system,
-      );
-      Log.debug(
-        '🎫 Zendesk: NIP-05: ${profile?.nip05 ?? "none"}',
-        category: LogCategory.system,
-      );
-
-      await ZendeskSupportService.setUserIdentity(
-        displayName: profile?.bestDisplayName,
-        nip05: profile?.nip05,
-        npub: npub,
-      );
-
-      Log.debug(
-        '✅ Zendesk: Identity set successfully',
-        category: LogCategory.system,
-      );
-    } catch (e) {
-      Log.error(
-        '❌ Zendesk: Failed to set identity: $e',
-        category: LogCategory.system,
-      );
-    }
-  }
 
   /// Handle bug report submission
   /// Uses JWT identity for SDK ticket creation (enables View Past Messages)
