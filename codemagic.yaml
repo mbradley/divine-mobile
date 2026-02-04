@@ -13,6 +13,7 @@
 #   - ZENDESK_APP_ID
 #   - ZENDESK_CLIENT_ID
 #   - ZENDESK_URL
+#   - RELAY_MANAGER_URL
 # 6 - DEFAULT_ENV is configured via build inputs (dropdown) when starting a build
 #   - Options: PRODUCTION, STAGING, TEST, POC
 #   - Defaults to PRODUCTION for automatic builds
@@ -54,6 +55,7 @@ definitions:
           --dart-define=ZENDESK_APP_ID=$ZENDESK_APP_ID \
           --dart-define=ZENDESK_CLIENT_ID=$ZENDESK_CLIENT_ID \
           --dart-define=ZENDESK_URL=$ZENDESK_URL \
+          --dart-define=RELAY_MANAGER_URL=$RELAY_MANAGER_URL \
           --dart-define=DEFAULT_ENV=${{ inputs.DEFAULT_ENV }} \
           --dart-define=PROOFMODE_SIGNING_SERVER_ENDPOINT=$PROOFMODE_SIGNING_SERVER_ENDPOINT \
           --dart-define=PROOFMODE_SIGNING_SERVER_TOKEN=$PROOFMODE_SIGNING_SERVER_TOKEN
@@ -66,6 +68,7 @@ definitions:
           --dart-define=ZENDESK_APP_ID=$ZENDESK_APP_ID \
           --dart-define=ZENDESK_CLIENT_ID=$ZENDESK_CLIENT_ID \
           --dart-define=ZENDESK_URL=$ZENDESK_URL \
+          --dart-define=RELAY_MANAGER_URL=$RELAY_MANAGER_URL \
           --dart-define=DEFAULT_ENV=${{ inputs.DEFAULT_ENV }} \
           --dart-define=PROOFMODE_SIGNING_SERVER_ENDPOINT=$PROOFMODE_SIGNING_SERVER_ENDPOINT \
           --dart-define=PROOFMODE_SIGNING_SERVER_TOKEN=$PROOFMODE_SIGNING_SERVER_TOKEN
@@ -106,6 +109,7 @@ definitions:
           --dart-define=ZENDESK_APP_ID=$ZENDESK_APP_ID \
           --dart-define=ZENDESK_CLIENT_ID=$ZENDESK_CLIENT_ID \
           --dart-define=ZENDESK_URL=$ZENDESK_URL \
+          --dart-define=RELAY_MANAGER_URL=$RELAY_MANAGER_URL \
           --dart-define=DEFAULT_ENV=${{ inputs.DEFAULT_ENV }} \
           --dart-define=PROOFMODE_SIGNING_SERVER_ENDPOINT=$PROOFMODE_SIGNING_SERVER_ENDPOINT \
           --dart-define=PROOFMODE_SIGNING_SERVER_TOKEN=$PROOFMODE_SIGNING_SERVER_TOKEN \
@@ -117,6 +121,7 @@ definitions:
           --dart-define=ZENDESK_APP_ID=$ZENDESK_APP_ID \
           --dart-define=ZENDESK_CLIENT_ID=$ZENDESK_CLIENT_ID \
           --dart-define=ZENDESK_URL=$ZENDESK_URL \
+          --dart-define=RELAY_MANAGER_URL=$RELAY_MANAGER_URL \
           --dart-define=DEFAULT_ENV=${{ inputs.DEFAULT_ENV }} \
           --dart-define=PROOFMODE_SIGNING_SERVER_ENDPOINT=$PROOFMODE_SIGNING_SERVER_ENDPOINT \
           --dart-define=PROOFMODE_SIGNING_SERVER_TOKEN=$PROOFMODE_SIGNING_SERVER_TOKEN
