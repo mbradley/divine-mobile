@@ -2082,12 +2082,12 @@ final class SubscriptionManagerProvider
 String _$subscriptionManagerHash() =>
     r'b65a6978927d3004c6f841e0b80075f9db9645d2';
 
-/// Video event service depends on Nostr, SeenVideos, Blocklist, AgeVerification, SubscriptionManager, and VideoRepository
+/// Video event service depends on Nostr, SeenVideos, Blocklist, AgeVerification, and SubscriptionManager
 
 @ProviderFor(videoEventService)
 const videoEventServiceProvider = VideoEventServiceProvider._();
 
-/// Video event service depends on Nostr, SeenVideos, Blocklist, AgeVerification, SubscriptionManager, and VideoRepository
+/// Video event service depends on Nostr, SeenVideos, Blocklist, AgeVerification, and SubscriptionManager
 
 final class VideoEventServiceProvider
     extends
@@ -2097,7 +2097,7 @@ final class VideoEventServiceProvider
           VideoEventService
         >
     with $Provider<VideoEventService> {
-  /// Video event service depends on Nostr, SeenVideos, Blocklist, AgeVerification, SubscriptionManager, and VideoRepository
+  /// Video event service depends on Nostr, SeenVideos, Blocklist, AgeVerification, and SubscriptionManager
   const VideoEventServiceProvider._()
     : super(
         from: null,
@@ -2132,7 +2132,7 @@ final class VideoEventServiceProvider
   }
 }
 
-String _$videoEventServiceHash() => r'912579edfca6f3157a2c1d999b09f17f96358077';
+String _$videoEventServiceHash() => r'2e58eabbb8807979c479042abb7adc1bbb3bfade';
 
 /// Hashtag service depends on Video event service and cache service
 
@@ -3620,6 +3620,76 @@ final class CommentsRepositoryProvider
 String _$commentsRepositoryHash() =>
     r'0f9ae0f15ebfc8ccb85e8ae3e2e251527271f334';
 
+/// Provider for VideoLocalStorage instance (SQLite-backed)
+///
+/// Creates a DbVideoLocalStorage for caching video events locally.
+/// Used by VideosRepository for cache-first lookups.
+///
+/// Uses:
+/// - NostrEventsDao from databaseProvider (for SQLite storage)
+
+@ProviderFor(videoLocalStorage)
+const videoLocalStorageProvider = VideoLocalStorageProvider._();
+
+/// Provider for VideoLocalStorage instance (SQLite-backed)
+///
+/// Creates a DbVideoLocalStorage for caching video events locally.
+/// Used by VideosRepository for cache-first lookups.
+///
+/// Uses:
+/// - NostrEventsDao from databaseProvider (for SQLite storage)
+
+final class VideoLocalStorageProvider
+    extends
+        $FunctionalProvider<
+          VideoLocalStorage,
+          VideoLocalStorage,
+          VideoLocalStorage
+        >
+    with $Provider<VideoLocalStorage> {
+  /// Provider for VideoLocalStorage instance (SQLite-backed)
+  ///
+  /// Creates a DbVideoLocalStorage for caching video events locally.
+  /// Used by VideosRepository for cache-first lookups.
+  ///
+  /// Uses:
+  /// - NostrEventsDao from databaseProvider (for SQLite storage)
+  const VideoLocalStorageProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'videoLocalStorageProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$videoLocalStorageHash();
+
+  @$internal
+  @override
+  $ProviderElement<VideoLocalStorage> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  VideoLocalStorage create(Ref ref) {
+    return videoLocalStorage(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(VideoLocalStorage value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<VideoLocalStorage>(value),
+    );
+  }
+}
+
+String _$videoLocalStorageHash() => r'0be44203ec8edf59105a013aae374c07637a3ba0';
+
 /// Provider for VideosRepository instance
 ///
 /// Creates a VideosRepository for loading video feeds with pagination.
@@ -3627,6 +3697,7 @@ String _$commentsRepositoryHash() =>
 ///
 /// Uses:
 /// - NostrClient from nostrServiceProvider (for relay communication)
+/// - VideoLocalStorage for cache-first lookups and caching results
 /// - ContentBlocklistService for filtering blocked/muted users
 /// - AgeVerificationService for filtering NSFW content based on user preference
 
@@ -3640,6 +3711,7 @@ const videosRepositoryProvider = VideosRepositoryProvider._();
 ///
 /// Uses:
 /// - NostrClient from nostrServiceProvider (for relay communication)
+/// - VideoLocalStorage for cache-first lookups and caching results
 /// - ContentBlocklistService for filtering blocked/muted users
 /// - AgeVerificationService for filtering NSFW content based on user preference
 
@@ -3658,6 +3730,7 @@ final class VideosRepositoryProvider
   ///
   /// Uses:
   /// - NostrClient from nostrServiceProvider (for relay communication)
+  /// - VideoLocalStorage for cache-first lookups and caching results
   /// - ContentBlocklistService for filtering blocked/muted users
   /// - AgeVerificationService for filtering NSFW content based on user preference
   const VideosRepositoryProvider._()
@@ -3693,7 +3766,7 @@ final class VideosRepositoryProvider
   }
 }
 
-String _$videosRepositoryHash() => r'3e9ad46c21e9eee2a019898e4048a86871afab53';
+String _$videosRepositoryHash() => r'b21ecf459b7186280630e67d72b5c27a3e73edd0';
 
 /// Provider for LikesRepository instance
 ///
