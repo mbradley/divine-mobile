@@ -20,7 +20,9 @@ import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:openvine/services/video_editor/video_editor_split_service.dart';
+import 'package:openvine/utils/path_resolver.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:path/path.dart' as p;
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
@@ -830,10 +832,23 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
       category: .video,
     );
 
+    // Move rendered file from temp to documents directory so it persists
+    // and can be resolved correctly when loading from a draft.
+    final documentsPath = await getDocumentsPath();
+    final fileName = p.basename(outputPath);
+    final permanentPath = p.join(documentsPath, fileName);
+    await File(outputPath).rename(permanentPath);
+
+    Log.debug(
+      '📁 Moved rendered video to documents: $permanentPath',
+      name: 'VideoEditorNotifier',
+      category: .video,
+    );
+
     // Create final clip for publishing
     final finalRenderedClip = RecordingClip(
       id: 'clip-${DateTime.now()}',
-      video: EditorVideo.file(outputPath),
+      video: EditorVideo.file(permanentPath),
       duration: metaData.duration,
       recordedAt: .now(),
       originalAspectRatio: _clips.first.originalAspectRatio,
