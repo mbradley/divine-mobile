@@ -517,9 +517,9 @@ class VideoEvent {
     }
 
     // DEBUG: Log full event for cdn.divine.video thumbnails
-    if (thumbnailUrl != null && thumbnailUrl!.contains('cdn.divine.video')) {
+    if (thumbnailUrl != null && thumbnailUrl!.contains('media.divine.video')) {
       developer.log(
-        '🔍 DEBUG cdn.divine.video thumbnail found!',
+        '🔍 DEBUG divine.video thumbnail found!',
         name: 'VideoEvent',
       );
       developer.log('🔍 Event ID: ${event.id}', name: 'VideoEvent');
@@ -670,6 +670,11 @@ class VideoEvent {
     return rawTags['pgp_fingerprint'];
   }
 
+  /// ProofMode: Get C2PA Manifest Id
+  String? get proofModeC2paManifestId {
+    return rawTags['c2pa_manifest_id'];
+  }
+
   String? get addressableId => vineId != null
       ? AId(
           kind: EventKind.videoVertical,
@@ -683,7 +688,8 @@ class VideoEvent {
     return proofModeVerificationLevel != null ||
         proofModeManifest != null ||
         proofModePgpFingerprint != null ||
-        proofModeDeviceAttestation != null;
+        proofModeDeviceAttestation != null ||
+        proofModeC2paManifestId != null;
   }
 
   /// ProofMode: Check if video is verified mobile (highest level)
