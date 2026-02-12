@@ -237,6 +237,7 @@ flutter:
     - assets/sounds/
     - assets/top_1000_hashtags.json
     - assets/fonts/
+    - google_fonts/
     - assets/icon/
     - assets/icon/content-controls/
     - assets/loading-brand.gif
