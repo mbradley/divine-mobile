@@ -87,7 +87,6 @@ class _ProfileSetupScreenViewState
   bool _isUploadingImage = false;
   File? _selectedImage;
   String? _uploadedImageUrl;
-  String? _initialUsername;
   Color? _selectedProfileColor;
 
   @override
@@ -164,7 +163,11 @@ class _ProfileSetupScreenViewState
                 }
                 if (username != null) {
                   _nip05Controller.text = username;
-                  _initialUsername = username;
+                  if (mounted) {
+                    context.read<ProfileEditorBloc>().add(
+                      InitialUsernameSet(username),
+                    );
+                  }
                 }
               }
 
@@ -994,37 +997,24 @@ class _ProfileSetupScreenViewState
                   ),
                   const SizedBox(width: 16),
                   if (pubkey != null)
-                    BlocBuilder<ProfileEditorBloc, ProfileEditorState>(
-                      builder: (context, blocState) {
-                        // Presentation logic: enable save button when form is valid
-                        // and username validation state allows it
-                        final username = _nip05Controller.text.trim();
-                        final canSave =
+                    Expanded(
+                      child: _SaveButton(
+                        canSave:
                             _nameController.text.trim().isNotEmpty &&
-                            (username.isEmpty ||
-                                blocState.usernameStatus ==
-                                    UsernameStatus.available ||
-                                username == _initialUsername) &&
-                            blocState.usernameStatus != UsernameStatus.checking;
-
-                        return Expanded(
-                          child: _SaveButton(
-                            canSave: canSave,
-                            onSave: () => context.read<ProfileEditorBloc>().add(
-                              ProfileSaved(
-                                pubkey: pubkey,
-                                displayName: _nameController.text,
-                                about: _bioController.text,
-                                username: _nip05Controller.text,
-                                picture: _pictureController.text,
-                                banner: _selectedProfileColor != null
-                                    ? '0x${_selectedProfileColor!.toARGB32().toRadixString(16).substring(2)}'
-                                    : null,
-                              ),
-                            ),
+                            profileEditorState.isUsernameSaveReady,
+                        onSave: () => context.read<ProfileEditorBloc>().add(
+                          ProfileSaved(
+                            pubkey: pubkey,
+                            displayName: _nameController.text,
+                            about: _bioController.text,
+                            username: _nip05Controller.text,
+                            picture: _pictureController.text,
+                            banner: _selectedProfileColor != null
+                                ? '0x${_selectedProfileColor!.toARGB32().toRadixString(16).substring(2)}'
+                                : null,
                           ),
-                        );
-                      },
+                        ),
+                      ),
                     ),
                 ],
               ),
@@ -1448,7 +1438,7 @@ class UsernameStatusIndicator extends StatelessWidget {
     if (error != null) {
       errorText = switch (error) {
         UsernameValidationError.invalidFormat =>
-          'Only letters, numbers, -, _, and . are allowed',
+          'Only lowercase letters, numbers, -, _, and . are allowed',
         UsernameValidationError.invalidLength =>
           'Username must be 3-20 characters',
         UsernameValidationError.networkError =>
