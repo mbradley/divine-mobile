@@ -29,6 +29,7 @@ import com.zendesk.service.ErrorResponse
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlin.coroutines.cancellation.CancellationException
 import org.witness.proofmode.notarization.NotarizationProvider
 import java.security.KeyPairGenerator
 import java.security.KeyStore
@@ -187,15 +188,21 @@ class MainActivity : FlutterActivity() {
         var fileCert = File(context.filesDir.parent + "/app_flutter","$keyAlias.cert")
 
         CoroutineScope(Dispatchers.IO).launch {
-            C2PAIdentityManager(this@MainActivity).createHardwareSigner(
-                keyAlias,
-                C2PAIdentityManager.TSA_DIGICERT,
-                fileCert.canonicalPath
-            )
+            try {
+                C2PAIdentityManager(this@MainActivity).createHardwareSigner(
+                    keyAlias,
+                    C2PAIdentityManager.TSA_DIGICERT,
+                    fileCert.canonicalPath
+                )
 
-            fileCert = File(fileCert.canonicalPath)
-            if (fileCert.exists())
-                Log.d("DiVine","Success: " + fileCert.canonicalPath)
+                fileCert = File(fileCert.canonicalPath)
+                if (fileCert.exists())
+                    Log.d(PROOFMODE_TAG, "C2PA signer init success: " + fileCert.canonicalPath)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(PROOFMODE_TAG, "C2PA hardware signer init failed", e)
+            }
         }
     }
 
