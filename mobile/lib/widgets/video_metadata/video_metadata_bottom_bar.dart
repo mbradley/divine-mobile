@@ -3,12 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:openvine/models/saved_clip.dart';
+import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/screens/clip_library_screen.dart';
 import 'package:openvine/screens/home_screen_router.dart';
+import 'package:openvine/services/gallery_save_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
+import 'package:pro_video_editor/pro_video_editor.dart';
 
 /// Bottom bar with "Save for Later" and "Post" buttons for video metadata.
 ///
@@ -105,8 +109,51 @@ class _SaveForLaterButton extends ConsumerWidget {
     }
 
     bool saveSuccess = true;
+    String? gallerySaveMessage;
 
     try {
+      // 1. Get video path and save to gallery FIRST (before draft save deletes
+      // the original file)
+      final videoPath = await recordingClips.first.video.safeFilePath();
+      final gallerySaveService = ref.read(gallerySaveServiceProvider);
+      final galleryResult = await gallerySaveService.saveVideoToGallery(
+        EditorVideo.file(videoPath),
+      );
+
+      gallerySaveMessage = switch (galleryResult) {
+        GallerySaveSuccess() => 'Saved to camera roll',
+        GallerySavePermissionDenied() => 'Camera roll: permission denied',
+        GallerySaveFailure(:final reason) => 'Camera roll: $reason',
+      };
+
+      // 2. Save each clip to the clip library for the Clips tab
+      // (must happen before saveAsDraft which may delete files)
+      final clipLibraryService = ref.read(clipLibraryServiceProvider);
+      final sessionId = 'save_${DateTime.now().millisecondsSinceEpoch}';
+
+      for (final clip in recordingClips) {
+        final clipPath = await clip.video.safeFilePath();
+        final savedClip = SavedClip(
+          id: 'clip_${DateTime.now().microsecondsSinceEpoch}_${clip.id}',
+          filePath: clipPath,
+          thumbnailPath: clip.thumbnailPath,
+          duration: clip.duration,
+          createdAt: DateTime.now(),
+          aspectRatio: clip.targetAspectRatio.name,
+          sessionId: sessionId,
+        );
+
+        await clipLibraryService.saveClip(savedClip);
+
+        Log.info(
+          'Saved clip to library: ${savedClip.id}',
+          name: '_SaveForLaterButton',
+          category: LogCategory.video,
+        );
+      }
+
+      // 3. Save as draft (with metadata) for the Drafts tab
+      // Note: This may delete original files, so it must happen LAST
       final draftSuccess = await ref
           .read(videoEditorProvider.notifier)
           .saveAsDraft();
@@ -137,7 +184,7 @@ class _SaveForLaterButton extends ConsumerWidget {
     // Build the status message
     String label;
     if (saveSuccess) {
-      label = 'Saved to library!';
+      label = gallerySaveMessage ?? 'Saved to library!';
     } else {
       label = 'Failed to save';
     }
