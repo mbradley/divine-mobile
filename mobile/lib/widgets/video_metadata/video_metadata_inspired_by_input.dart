@@ -43,21 +43,36 @@ class VideoMetadataInspiredByInput extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 12,
         children: [
-          // Section label
+          Row(
+            children: [
+              Text(
+                // TODO(l10n): Replace with context.l10n
+                //   when localization is added.
+                'Inspired by',
+                style: VineTheme.bodyFont(
+                  color: VineTheme.onSurface,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  height: 1.25,
+                ),
+              ),
+              const SizedBox(width: 8),
+              _HelpButton(
+                // TODO(l10n): Replace with context.l10n
+                //   when localization is added.
+                onTap: () => _showHelpDialog(context),
+                tooltip: 'How inspiration credits work',
+              ),
+            ],
+          ),
           Text(
             // TODO(l10n): Replace with context.l10n
             //   when localization is added.
-            'Inspired by',
-            style: VineTheme.bodyFont(
-              color: VineTheme.onSurfaceVariant,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              height: 1.45,
-              letterSpacing: 0.5,
-            ),
+            'Credit the creator or post that influenced this video.',
+            style: VineTheme.bodyMediumFont(color: VineTheme.onSurfaceMuted),
           ),
 
-          // Show current attribution or add button
+          // Show current attribution or add button.
           if (hasInspiredBy)
             _InspiredByDisplay(
               inspiredByNpub: inspiredByNpub,
@@ -69,6 +84,39 @@ class VideoMetadataInspiredByInput extends ConsumerWidget {
             ),
         ],
       ),
+    );
+  }
+
+  void _showHelpDialog(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: VineTheme.cardBackground,
+          title: Text(
+            // TODO(l10n): Replace with context.l10n when localization is added.
+            'Inspired by',
+            style: VineTheme.titleMediumFont(color: VineTheme.onSurface),
+          ),
+          content: Text(
+            // TODO(l10n): Replace with context.l10n when localization is added.
+            'Use this to give attribution. Inspired-by credit is different '
+            'from collaborators: it acknowledges influence, but does not tag '
+            'someone as a co-creator.',
+            style: VineTheme.bodyMediumFont(color: VineTheme.onSurfaceMuted),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                // TODO(l10n): Replace with context.l10n when localization is added.
+                'Got it',
+                style: VineTheme.bodyFont(color: VineTheme.primary),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -131,10 +179,12 @@ class _InspiredByDisplay extends ConsumerWidget {
     final pubkey = _pubkey;
 
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        color: VineTheme.cardBackground,
+        color: const Color(0xFF0B2A20),
+        border: Border.all(color: VineTheme.outlineVariant),
       ),
       child: Row(
         children: [
@@ -284,37 +334,87 @@ class _AddInspiredByButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onPressed,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: VineTheme.onSurfaceMuted,
-                strokeAlign: BorderSide.strokeAlignInside,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          color: const Color(0x8C032017),
+          border: Border.all(color: VineTheme.outlineVariant),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(7),
+                color: const Color(0xFF0E2B21),
+              ),
+              child: const Icon(Icons.add, color: VineTheme.primary, size: 15),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              // TODO(l10n): Replace with context.l10n
+              //   when localization is added.
+              'Add inspiration credit',
+              style: VineTheme.bodyFont(
+                color: VineTheme.onSurfaceVariant,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
               ),
             ),
-            child: const Icon(
-              Icons.add,
-              color: VineTheme.onSurfaceMuted,
-              size: 16,
+            const Spacer(),
+            Text(
+              // TODO(l10n): Replace with context.l10n
+              //   when localization is added.
+              'One source',
+              style: VineTheme.bodyFont(
+                color: VineTheme.onSurfaceMuted,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HelpButton extends StatelessWidget {
+  const _HelpButton({required this.onTap, required this.tooltip});
+
+  final VoidCallback onTap;
+  final String tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          width: 22,
+          height: 22,
+          decoration: BoxDecoration(
+            color: const Color(0x8C032017),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: VineTheme.outlineVariant),
+          ),
+          child: Center(
+            child: Text(
+              '?',
+              style: VineTheme.bodyFont(
+                color: VineTheme.onSurfaceVariant,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
-          const SizedBox(width: 8),
-          Text(
-            // TODO(l10n): Replace with context.l10n
-            //   when localization is added.
-            'Add inspiration credit',
-            style: VineTheme.bodyFont(
-              color: VineTheme.onSurfaceMuted,
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
