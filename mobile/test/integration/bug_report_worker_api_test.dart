@@ -44,7 +44,10 @@ void main() {
         );
 
         // Send to Worker API
-        final result = await bugReportService.sendBugReportToRecipient(testData, 'test-pubkey');
+        final result = await bugReportService.sendBugReportToRecipient(
+          testData,
+          'test-pubkey',
+        );
 
         // Verify success
         expect(
@@ -84,7 +87,10 @@ void main() {
         );
 
         // Attempt to send
-        final result = await bugReportService.sendBugReportToRecipient(invalidData, 'test-pubkey');
+        final result = await bugReportService.sendBugReportToRecipient(
+          invalidData,
+          'test-pubkey',
+        );
 
         // Should fail or fall back to email
         // We accept either failure or email fallback
@@ -111,7 +117,10 @@ void main() {
         expect(diagnostics.deviceInfo, isNotEmpty);
 
         // Send the collected diagnostics
-        final result = await bugReportService.sendBugReportToRecipient(diagnostics, 'test-pubkey');
+        final result = await bugReportService.sendBugReportToRecipient(
+          diagnostics,
+          'test-pubkey',
+        );
 
         // Verify submission
         expect(result.success, isTrue);
