@@ -203,6 +203,8 @@ class _HomeScreenRouterState extends ConsumerState<HomeScreenRouter>
             itemCount: videos.length,
             controller: _controller,
             scrollDirection: Axis.vertical,
+            // Pre-builds adjacent pages to prevent black flash during swipe
+            allowImplicitScrolling: true,
             onPageChanged: (newIndex) {
               // Update current page state to trigger rebuild with correct
               // isActive values for all visible VideoFeedItems.
@@ -248,15 +250,18 @@ class _HomeScreenRouterState extends ConsumerState<HomeScreenRouter>
             itemBuilder: (context, index) {
               final isActive = index == _currentPageIndex;
 
-              return VideoFeedItem(
-                key: ValueKey('video-${videos[index].id}'),
-                video: videos[index],
-                index: index,
-                hasBottomNavigation: false,
-                contextTitle: '', // Home feed has no context title
-                hideFollowButtonIfFollowing:
-                    true, // Home feed only shows followed users
-                isActiveOverride: isActive,
+              return ClipRRect(
+                child: VideoFeedItem(
+                  key: ValueKey('video-${videos[index].id}'),
+                  video: videos[index],
+                  index: index,
+                  hasBottomNavigation: false,
+                  forceShowOverlay: true,
+                  contextTitle: '', // Home feed has no context title
+                  hideFollowButtonIfFollowing:
+                      true, // Home feed only shows followed users
+                  isActiveOverride: isActive,
+                ),
               );
             },
           ),
