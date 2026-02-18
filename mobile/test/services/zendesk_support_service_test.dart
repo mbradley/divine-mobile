@@ -469,6 +469,5 @@ void main() {
       // When API token is not configured, should return false
       expect(result, ZendeskConfig.isRestApiConfigured);
     });
-
   });
 }
