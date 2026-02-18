@@ -5,7 +5,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:openvine/models/log_entry.dart';
+import 'package:models/models.dart' show LogEntry;
 import 'package:openvine/services/bug_report_service.dart';
 import 'package:openvine/services/zendesk_support_service.dart';
 import 'package:divine_ui/divine_ui.dart';
