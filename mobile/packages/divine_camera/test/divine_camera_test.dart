@@ -74,6 +74,11 @@ class MockDivineCameraPlatform
   }
 
   @override
+  Future<bool> cancelFocusAndMetering() async {
+    return true;
+  }
+
+  @override
   Future<bool> setZoomLevel(double level) async {
     return level >= 1.0 && level <= 10.0;
   }
@@ -275,6 +280,14 @@ void main() {
         final success = await DivineCamera.instance.setExposurePoint(
           const Offset(0.3, 0.7),
         );
+
+        expect(success, isTrue);
+      });
+
+      test('cancels focus and metering successfully', () async {
+        await DivineCamera.instance.initialize();
+
+        final success = await DivineCamera.instance.cancelFocusAndMetering();
 
         expect(success, isTrue);
       });
