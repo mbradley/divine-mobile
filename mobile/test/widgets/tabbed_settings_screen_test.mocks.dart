@@ -1395,19 +1395,6 @@ class MockBugReportService extends _i1.Mock implements _i17.BugReportService {
           as int);
 
   @override
-  _i8.Future<_i7.BugReportResult> sendBugReport(_i7.BugReportData? data) =>
-      (super.noSuchMethod(
-            Invocation.method(#sendBugReport, [data]),
-            returnValue: _i8.Future<_i7.BugReportResult>.value(
-              _FakeBugReportResult_8(
-                this,
-                Invocation.method(#sendBugReport, [data]),
-              ),
-            ),
-          )
-          as _i8.Future<_i7.BugReportResult>);
-
-  @override
   _i8.Future<_i7.BugReportResult> sendBugReportToRecipient(
     _i7.BugReportData? data,
     String? recipientPubkey,
