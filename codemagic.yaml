@@ -78,14 +78,25 @@ definitions:
         fi
         VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | sed 's/+.*//')
         TAG="$VERSION"
-        echo "Creating GitHub Release $TAG"
-        gh release create "$TAG" \
-          --repo "$CM_REPO_SLUG" \
-          --title "$TAG" \
-          --prerelease \
-          --generate-notes \
-          build/app/outputs/apk/release/*arm64*.apk \
-          build/app/outputs/apk/release/*armeabi*.apk
+        echo "Publishing to GitHub Release $TAG"
+        # If release already exists, upload assets to it; otherwise create new
+        if gh release view "$TAG" --repo "$CM_REPO_SLUG" > /dev/null 2>&1; then
+          echo "Release $TAG exists, uploading assets (replacing existing)"
+          gh release upload "$TAG" \
+            --repo "$CM_REPO_SLUG" \
+            --clobber \
+            build/app/outputs/apk/release/*arm64*.apk \
+            build/app/outputs/apk/release/*armeabi*.apk
+        else
+          echo "Creating new release $TAG"
+          gh release create "$TAG" \
+            --repo "$CM_REPO_SLUG" \
+            --title "$TAG" \
+            --prerelease \
+            --generate-notes \
+            build/app/outputs/apk/release/*arm64*.apk \
+            build/app/outputs/apk/release/*armeabi*.apk
+        fi
     - &build_ios
       name: Build and sign iOS
       script: |
