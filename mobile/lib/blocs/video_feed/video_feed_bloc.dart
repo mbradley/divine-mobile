@@ -39,12 +39,18 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedState> {
       transformer: droppable(),
     );
     on<VideoFeedRefreshRequested>(_onRefreshRequested);
+    on<VideoFeedFollowingListChanged>(_onFollowingListChanged);
   }
 
   final VideosRepository _videosRepository;
   final FollowRepository _followRepository;
 
   /// Handle feed started event.
+  ///
+  /// After the initial load, subscribes to [FollowRepository.followingStream]
+  /// so the home feed refreshes reactively when the user follows/unfollows
+  /// someone. The first emission is skipped (BehaviorSubject replays its
+  /// seed/last value) to avoid a redundant refresh on startup.
   Future<void> _onStarted(
     VideoFeedStarted event,
     Emitter<VideoFeedState> emit,
@@ -52,6 +58,11 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedState> {
     emit(state.copyWith(status: VideoFeedStatus.loading, mode: event.mode));
 
     await _loadVideos(event.mode, emit);
+
+    await emit.onEach<List<String>>(
+      _followRepository.followingStream.skip(1),
+      onData: (pubkeys) => add(VideoFeedFollowingListChanged(pubkeys)),
+    );
   }
 
   /// Handle mode changed event.
@@ -161,6 +172,29 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedState> {
     );
 
     await _loadVideos(state.mode, emit);
+  }
+
+  /// Handle following list changes from [FollowRepository].
+  ///
+  /// Only refreshes when the current mode is [FeedMode.home] and the
+  /// feed has already been loaded (avoids double-loading on startup).
+  Future<void> _onFollowingListChanged(
+    VideoFeedFollowingListChanged event,
+    Emitter<VideoFeedState> emit,
+  ) async {
+    if (state.mode != FeedMode.home) return;
+    if (state.status == VideoFeedStatus.loading) return;
+
+    emit(
+      state.copyWith(
+        status: VideoFeedStatus.loading,
+        videos: [],
+        hasMore: true,
+        clearError: true,
+      ),
+    );
+
+    await _loadVideos(FeedMode.home, emit);
   }
 
   /// Load videos for the specified mode.
