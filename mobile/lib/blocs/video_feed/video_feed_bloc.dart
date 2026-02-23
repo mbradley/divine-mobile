@@ -18,6 +18,9 @@ part 'video_feed_state.dart';
 /// Number of videos to load per page.
 const _pageSize = 5;
 
+/// Default interval between auto-refreshes of the home feed.
+const _defaultAutoRefreshMinInterval = Duration(minutes: 10);
+
 /// BLoC for managing the unified video feed.
 ///
 /// Handles:
@@ -29,8 +32,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedState> {
   VideoFeedBloc({
     required VideosRepository videosRepository,
     required FollowRepository followRepository,
+    Duration autoRefreshMinInterval = _defaultAutoRefreshMinInterval,
   }) : _videosRepository = videosRepository,
        _followRepository = followRepository,
+       _autoRefreshMinInterval = autoRefreshMinInterval,
        super(const VideoFeedState()) {
     on<VideoFeedStarted>(_onStarted);
     on<VideoFeedModeChanged>(_onModeChanged);
@@ -39,11 +44,17 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedState> {
       transformer: droppable(),
     );
     on<VideoFeedRefreshRequested>(_onRefreshRequested);
+    on<VideoFeedAutoRefreshRequested>(_onAutoRefreshRequested);
     on<VideoFeedFollowingListChanged>(_onFollowingListChanged);
   }
 
   final VideosRepository _videosRepository;
   final FollowRepository _followRepository;
+  final Duration _autoRefreshMinInterval;
+
+  /// Tracks when the last successful load completed, used by
+  /// [_onAutoRefreshRequested] to skip refreshes when data is fresh.
+  DateTime? _lastRefreshedAt;
 
   /// Handle feed started event.
   ///
@@ -174,6 +185,36 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedState> {
     await _loadVideos(state.mode, emit);
   }
 
+  /// Handle auto-refresh request (dispatched by UI on app resume).
+  ///
+  /// Only refreshes when:
+  /// - The current feed mode is [FeedMode.home]
+  /// - The data is stale (last refresh was longer ago than
+  ///   [_autoRefreshMinInterval])
+  Future<void> _onAutoRefreshRequested(
+    VideoFeedAutoRefreshRequested event,
+    Emitter<VideoFeedState> emit,
+  ) async {
+    if (state.mode != FeedMode.home) return;
+
+    final lastRefresh = _lastRefreshedAt;
+    if (lastRefresh != null &&
+        DateTime.now().difference(lastRefresh) < _autoRefreshMinInterval) {
+      return;
+    }
+
+    emit(
+      state.copyWith(
+        status: VideoFeedStatus.loading,
+        videos: [],
+        hasMore: true,
+        clearError: true,
+      ),
+    );
+
+    await _loadVideos(state.mode, emit);
+  }
+
   /// Handle following list changes from [FollowRepository].
   ///
   /// Only refreshes when the current mode is [FeedMode.home] and the
@@ -219,6 +260,8 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedState> {
         );
         return;
       }
+
+      _lastRefreshedAt = DateTime.now();
 
       emit(
         state.copyWith(
