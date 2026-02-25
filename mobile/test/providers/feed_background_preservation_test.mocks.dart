@@ -189,6 +189,14 @@ class MockAnalyticsApiService extends _i1.Mock
           as _i4.Future<List<Map<String, dynamic>>>);
 
   @override
+  _i4.Future<Map<String, dynamic>?> getRawEvent(String? eventId) =>
+      (super.noSuchMethod(
+            Invocation.method(#getRawEvent, [eventId]),
+            returnValue: _i4.Future<Map<String, dynamic>?>.value(),
+          )
+          as _i4.Future<Map<String, dynamic>?>);
+
+  @override
   _i4.Future<_i3.VideoStats?> getVideoStats(String? eventId) =>
       (super.noSuchMethod(
             Invocation.method(#getVideoStats, [eventId]),
