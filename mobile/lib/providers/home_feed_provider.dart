@@ -89,6 +89,10 @@ class HomeFeed extends _$HomeFeed {
 
     _lastBuildTime = now;
 
+    // Watch content filter version — rebuilds feed when user changes
+    // Show/Warn/Hide preferences so the filter takes effect immediately.
+    ref.watch(contentFilterVersionProvider);
+
     // Get injectable poll interval (overridable in tests)
     final pollInterval = ref.read(homeFeedPollIntervalProvider);
 
@@ -637,6 +641,9 @@ class HomeFeed extends _$HomeFeed {
       );
     }
 
+    // Apply content filter preferences (hide videos matching "Filter Out")
+    followingVideos = videoEventService.filterVideoList(followingVideos);
+
     // Keep showing loading if we have no videos but might still be getting them from lists
     // This prevents showing "empty" while subscribed list cache is still syncing
     final stillLoadingLists = followingVideos.isEmpty && hasSubscribedLists;
@@ -908,10 +915,13 @@ class HomeFeed extends _$HomeFeed {
           final existingIds = currentState.videos
               .map((v) => v.id.toLowerCase())
               .toSet();
-          final newVideos = nostrEnrichedVideos
-              .where((v) => !existingIds.contains(v.id.toLowerCase()))
-              .where((v) => v.isSupportedOnCurrentPlatform)
-              .toList();
+          final videoEventService = ref.read(videoEventServiceProvider);
+          final newVideos = videoEventService.filterVideoList(
+            nostrEnrichedVideos
+                .where((v) => !existingIds.contains(v.id.toLowerCase()))
+                .where((v) => v.isSupportedOnCurrentPlatform)
+                .toList(),
+          );
 
           // Update cursor for next pagination
           _nextCursor = feedResult.nextCursor;
@@ -1089,6 +1099,10 @@ class HomeFeed extends _$HomeFeed {
           return a.id.compareTo(b.id);
         });
 
+        // Apply content filter preferences (hide videos matching "Filter Out")
+        final videoEventService = ref.read(videoEventServiceProvider);
+        videos = videoEventService.filterVideoList(videos);
+
         Log.info(
           '✅ HomeFeed: REST API refresh got ${videos.length} videos',
           name: 'HomeFeedProvider',
@@ -1167,6 +1181,9 @@ class HomeFeed extends _$HomeFeed {
     updatedVideos = updatedVideos
         .where((v) => v.isSupportedOnCurrentPlatform)
         .toList();
+
+    // Apply content filter preferences (hide videos matching "Filter Out")
+    updatedVideos = videoEventService.filterVideoList(updatedVideos);
 
     // Sort by creation time (newest first)
     updatedVideos.sort((a, b) {
