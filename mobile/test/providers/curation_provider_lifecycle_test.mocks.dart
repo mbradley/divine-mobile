@@ -25,6 +25,7 @@ import 'package:openvine/services/social_service.dart' as _i17;
 import 'package:openvine/services/user_profile_service.dart' as _i20;
 import 'package:openvine/services/video_event_service.dart' as _i11;
 import 'package:openvine/services/video_filter_builder.dart' as _i16;
+import 'package:shared_preferences/shared_preferences.dart' as _i22;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -2396,11 +2397,22 @@ class MockAnalyticsApiService extends _i1.Mock
           as _i10.Future<Map<String, dynamic>?>);
 
   @override
+  _i10.Future<_i6.HomeFeedResult?> getCachedHomeFeed({
+    required _i22.SharedPreferences? prefs,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#getCachedHomeFeed, [], {#prefs: prefs}),
+            returnValue: _i10.Future<_i6.HomeFeedResult?>.value(),
+          )
+          as _i10.Future<_i6.HomeFeedResult?>);
+
+  @override
   _i10.Future<_i6.HomeFeedResult> getHomeFeed({
     required String? pubkey,
     int? limit = 50,
     String? sort = 'recent',
     int? before,
+    _i22.SharedPreferences? prefs,
   }) =>
       (super.noSuchMethod(
             Invocation.method(#getHomeFeed, [], {
@@ -2408,6 +2420,7 @@ class MockAnalyticsApiService extends _i1.Mock
               #limit: limit,
               #sort: sort,
               #before: before,
+              #prefs: prefs,
             }),
             returnValue: _i10.Future<_i6.HomeFeedResult>.value(
               _FakeHomeFeedResult_4(
@@ -2417,6 +2430,7 @@ class MockAnalyticsApiService extends _i1.Mock
                   #limit: limit,
                   #sort: sort,
                   #before: before,
+                  #prefs: prefs,
                 }),
               ),
             ),

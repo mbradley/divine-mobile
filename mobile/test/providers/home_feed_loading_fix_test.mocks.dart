@@ -6,7 +6,7 @@
 import 'dart:async' as _i15;
 import 'dart:ui' as _i9;
 
-import 'package:keycast_flutter/keycast_flutter.dart' as _i22;
+import 'package:keycast_flutter/keycast_flutter.dart' as _i23;
 import 'package:likes_repository/likes_repository.dart' as _i12;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i8;
@@ -15,17 +15,18 @@ import 'package:nostr_client/nostr_client.dart' as _i2;
 import 'package:nostr_sdk/event.dart' as _i14;
 import 'package:nostr_sdk/filter.dart' as _i17;
 import 'package:nostr_sdk/nostr_sdk.dart' as _i6;
-import 'package:openvine/models/known_account.dart' as _i20;
+import 'package:openvine/models/known_account.dart' as _i21;
 import 'package:openvine/services/age_verification_service.dart' as _i11;
 import 'package:openvine/services/analytics_api_service.dart' as _i3;
 import 'package:openvine/services/auth_service.dart' as _i5;
 import 'package:openvine/services/content_blocklist_service.dart' as _i10;
 import 'package:openvine/services/content_filter_service.dart' as _i13;
-import 'package:openvine/services/relay_discovery_service.dart' as _i19;
+import 'package:openvine/services/relay_discovery_service.dart' as _i20;
 import 'package:openvine/services/subscription_manager.dart' as _i18;
-import 'package:openvine/services/user_profile_service.dart' as _i21;
+import 'package:openvine/services/user_profile_service.dart' as _i22;
 import 'package:openvine/services/video_event_service.dart' as _i7;
 import 'package:openvine/services/video_filter_builder.dart' as _i16;
+import 'package:shared_preferences/shared_preferences.dart' as _i19;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -1750,11 +1751,22 @@ class MockAnalyticsApiService extends _i1.Mock
           as _i15.Future<Map<String, dynamic>?>);
 
   @override
+  _i15.Future<_i3.HomeFeedResult?> getCachedHomeFeed({
+    required _i19.SharedPreferences? prefs,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#getCachedHomeFeed, [], {#prefs: prefs}),
+            returnValue: _i15.Future<_i3.HomeFeedResult?>.value(),
+          )
+          as _i15.Future<_i3.HomeFeedResult?>);
+
+  @override
   _i15.Future<_i3.HomeFeedResult> getHomeFeed({
     required String? pubkey,
     int? limit = 50,
     String? sort = 'recent',
     int? before,
+    _i19.SharedPreferences? prefs,
   }) =>
       (super.noSuchMethod(
             Invocation.method(#getHomeFeed, [], {
@@ -1762,6 +1774,7 @@ class MockAnalyticsApiService extends _i1.Mock
               #limit: limit,
               #sort: sort,
               #before: before,
+              #prefs: prefs,
             }),
             returnValue: _i15.Future<_i3.HomeFeedResult>.value(
               _FakeHomeFeedResult_1(
@@ -1771,6 +1784,7 @@ class MockAnalyticsApiService extends _i1.Mock
                   #limit: limit,
                   #sort: sort,
                   #before: before,
+                  #prefs: prefs,
                 }),
               ),
             ),
@@ -2022,12 +2036,12 @@ class MockAuthService extends _i1.Mock implements _i5.AuthService {
           as bool);
 
   @override
-  List<_i19.DiscoveredRelay> get userRelays =>
+  List<_i20.DiscoveredRelay> get userRelays =>
       (super.noSuchMethod(
             Invocation.getter(#userRelays),
-            returnValue: <_i19.DiscoveredRelay>[],
+            returnValue: <_i20.DiscoveredRelay>[],
           )
-          as List<_i19.DiscoveredRelay>);
+          as List<_i20.DiscoveredRelay>);
 
   @override
   bool get hasExistingProfile =>
@@ -2122,14 +2136,14 @@ class MockAuthService extends _i1.Mock implements _i5.AuthService {
           as _i15.Future<void>);
 
   @override
-  _i15.Future<List<_i20.KnownAccount>> getKnownAccounts() =>
+  _i15.Future<List<_i21.KnownAccount>> getKnownAccounts() =>
       (super.noSuchMethod(
             Invocation.method(#getKnownAccounts, []),
-            returnValue: _i15.Future<List<_i20.KnownAccount>>.value(
-              <_i20.KnownAccount>[],
+            returnValue: _i15.Future<List<_i21.KnownAccount>>.value(
+              <_i21.KnownAccount>[],
             ),
           )
-          as _i15.Future<List<_i20.KnownAccount>>);
+          as _i15.Future<List<_i21.KnownAccount>>);
 
   @override
   _i15.Future<void> removeKnownAccount(String? pubkeyHex) =>
@@ -2275,7 +2289,7 @@ class MockAuthService extends _i1.Mock implements _i5.AuthService {
 
   @override
   _i15.Future<void> refreshCurrentProfile(
-    _i21.UserProfileService? userProfileService,
+    _i22.UserProfileService? userProfileService,
   ) =>
       (super.noSuchMethod(
             Invocation.method(#refreshCurrentProfile, [userProfileService]),
@@ -2285,7 +2299,7 @@ class MockAuthService extends _i1.Mock implements _i5.AuthService {
           as _i15.Future<void>);
 
   @override
-  _i15.Future<void> signInWithDivineOAuth(_i22.KeycastSession? session) =>
+  _i15.Future<void> signInWithDivineOAuth(_i23.KeycastSession? session) =>
       (super.noSuchMethod(
             Invocation.method(#signInWithDivineOAuth, [session]),
             returnValue: _i15.Future<void>.value(),

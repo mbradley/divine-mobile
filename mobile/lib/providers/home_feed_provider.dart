@@ -10,7 +10,10 @@ import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/repositories/follow_repository.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/services/subscribed_list_video_cache.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_filter_builder.dart';
 import 'package:openvine/state/video_feed_state.dart';
@@ -157,18 +160,53 @@ class HomeFeed extends _$HomeFeed {
     // Will hold videos from either REST API or Nostr
     List<VideoEvent> followingVideosFromSource = [];
 
-    // Emit initial loading state so UI shows loading indicator instead of empty state
-    state = const AsyncData(
-      VideoFeedState(videos: [], hasMoreContent: false, isInitialLoad: true),
-    );
+    final analyticsService = ref.read(analyticsApiServiceProvider);
+    final prefs = ref.read(sharedPreferencesProvider);
 
-    // === PRIMARY PATH: Try REST API first ===
+    // === CACHE-FIRST: Show previous feed instantly ===
+    // Before any network call, check if we have a cached feed from the
+    // last session. If so, emit it immediately so the user sees content
+    // within milliseconds instead of waiting 2-6s for the REST API.
+    bool emittedFromCache = false;
+    if (currentUserPubkey != null) {
+      try {
+        final cached = await analyticsService.getCachedHomeFeed(prefs: prefs);
+        if (cached != null && cached.videos.isNotEmpty) {
+          _usingRestApi = true;
+          _restApiSucceededOnce = true;
+          followingVideosFromSource = cached.videos;
+          emittedFromCache = true;
+
+          Log.info(
+            '⚡ HomeFeed: Showing ${cached.videos.length} cached videos '
+            'instantly (from previous session)',
+            name: 'HomeFeedProvider',
+            category: LogCategory.video,
+          );
+        }
+      } catch (e) {
+        Log.warning(
+          '🏠 HomeFeed: Cache read failed: $e',
+          name: 'HomeFeedProvider',
+          category: LogCategory.video,
+        );
+      }
+    }
+
+    // If no cache, emit loading state so UI shows spinner
+    if (!emittedFromCache) {
+      state = const AsyncData(
+        VideoFeedState(videos: [], hasMoreContent: false, isInitialLoad: true),
+      );
+    }
+
+    // === PRIMARY PATH: Fetch fresh data from REST API ===
     // REST API only needs pubkey + analyticsApiService (independent of Nostr/followRepository)
     // Try optimistically without waiting for funnelcakeAvailableProvider to resolve
-    final analyticsService = ref.read(analyticsApiServiceProvider);
     if (currentUserPubkey != null) {
       Log.info(
-        '🏠 HomeFeed: Trying Funnelcake REST API first (pubkey available)',
+        '🏠 HomeFeed: Fetching fresh data from Funnelcake REST API'
+        '${emittedFromCache ? " (cache already displayed)" : ""}',
         name: 'HomeFeedProvider',
         category: LogCategory.video,
       );
@@ -178,6 +216,7 @@ class HomeFeed extends _$HomeFeed {
           pubkey: currentUserPubkey,
           limit: 100,
           sort: 'recent',
+          prefs: prefs,
         );
 
         if (feedResult.videos.isNotEmpty) {
@@ -193,12 +232,12 @@ class HomeFeed extends _$HomeFeed {
           unawaited(_enrichInBackground(feedResult.videos));
 
           Log.info(
-            '✅ HomeFeed: Got ${feedResult.videos.length} videos from REST API, '
+            '✅ HomeFeed: Got ${feedResult.videos.length} fresh videos from REST API, '
             'hasMore: ${feedResult.hasMore}, cursor: ${feedResult.nextCursor}',
             name: 'HomeFeedProvider',
             category: LogCategory.video,
           );
-        } else {
+        } else if (!emittedFromCache) {
           Log.warning(
             '🏠 HomeFeed: REST API returned empty, falling back to Nostr',
             name: 'HomeFeedProvider',
@@ -207,86 +246,75 @@ class HomeFeed extends _$HomeFeed {
           _usingRestApi = false;
         }
       } catch (e, stackTrace) {
-        Log.error(
-          '🏠 HomeFeed: REST API failed ($e), falling back to Nostr',
-          name: 'HomeFeedProvider',
-          category: LogCategory.video,
-          error: e,
-          stackTrace: stackTrace,
-        );
-        _usingRestApi = false;
+        if (!emittedFromCache) {
+          Log.error(
+            '🏠 HomeFeed: REST API failed ($e), falling back to Nostr',
+            name: 'HomeFeedProvider',
+            category: LogCategory.video,
+            error: e,
+            stackTrace: stackTrace,
+          );
+          _usingRestApi = false;
+        } else {
+          Log.warning(
+            '🏠 HomeFeed: REST API failed ($e), keeping cached data',
+            name: 'HomeFeedProvider',
+            category: LogCategory.video,
+          );
+        }
       }
     }
 
-    // === NOSTR FALLBACK PATH ===
-    // Only attempt Nostr subscription if REST API didn't provide videos
-    // FollowRepository requires NostrClient to be ready with keys
+    // === FOLLOW LIST REACTIVITY ===
+    // FollowRepository is null until NostrClient is ready with keys.
+    // When REST API succeeded, we DON'T watch followRepositoryProvider
+    // because watching causes a full rebuild when it transitions from
+    // null -> ready. The REST API already knows the user's follows
+    // server-side, so we only need reactivity for future follow/unfollow.
+    FollowRepository? followRepository;
 
-    // Read following list from FollowRepository (source of truth for BLoC-based follow actions)
-    // FollowRepository is null until NostrClient is ready with keys
-    final followRepository = ref.watch(followRepositoryProvider);
+    if (_usingRestApi) {
+      // REST API path: read current value without triggering rebuild
+      followRepository = ref.read(followRepositoryProvider);
 
-    // If REST API succeeded, we still set up followRepository listeners for
-    // follow/unfollow reactivity, but don't block on it
-    if (followRepository != null) {
-      // Listen to followingStream and refresh when following list changes
-      // Skip the initial replay from BehaviorSubject using skip(1)
-      // Track the current following set so we only refresh when it
-      // actually changes (not on the initial cache-load emission that
-      // arrives after the REST API has already returned personalised results).
-      var lastFollowingSet = followRepository.followingPubkeys.toSet();
-
-      final followingSubscription = followRepository.followingStream
-          .skip(1) // Skip initial replay, only react to NEW emissions
-          .listen((newFollowingList) {
-            final newSet = newFollowingList.toSet();
-            if (newSet.length == lastFollowingSet.length &&
-                newSet.containsAll(lastFollowingSet)) {
-              Log.debug(
-                '🏠 HomeFeed: Following list loaded but unchanged '
-                '(${newSet.length} users) - skipping refresh',
-                name: 'HomeFeedProvider',
-                category: LogCategory.video,
-              );
-              return;
-            }
-            lastFollowingSet = newSet;
-
-            Log.info(
-              '🏠 HomeFeed: Following list CHANGED '
-              '(${newFollowingList.length} users), '
-              'restApiPreferred=$_restApiSucceededOnce',
-              name: 'HomeFeedProvider',
-              category: LogCategory.video,
-            );
-            if (ref.mounted) {
-              if (_restApiSucceededOnce) {
-                // REST API worked before - re-fetch from REST API
-                // instead of invalidating (which resets _usingRestApi)
-                _refreshFromRestApi();
-              } else {
-                ref.invalidateSelf();
-              }
-            }
-          });
-
-      // Clean up stream subscription on dispose
-      ref.onDispose(() {
-        followingSubscription.cancel();
+      // Listen for followRepo becoming available (without rebuild)
+      // and set up stream listener for follow/unfollow reactivity
+      ref.listen(followRepositoryProvider, (prev, next) {
+        if (next != null && prev == null) {
+          Log.debug(
+            '🏠 HomeFeed: FollowRepository ready (REST API mode), '
+            'setting up stream listener',
+            name: 'HomeFeedProvider',
+            category: LogCategory.video,
+          );
+          _setupFollowingStreamListener(next);
+        }
       });
-    } else if (!_usingRestApi) {
-      Log.info(
-        '🏠 HomeFeed: Waiting for FollowRepository (NostrClient not ready) '
-        'and REST API unavailable - keeping provider alive for rebuild',
-        name: 'HomeFeedProvider',
-        category: LogCategory.video,
-      );
-      stopAutoRefresh();
-      return const VideoFeedState(
-        videos: [],
-        hasMoreContent: false,
-        isInitialLoad: true,
-      );
+
+      // If already available, set up listener now
+      if (followRepository != null) {
+        _setupFollowingStreamListener(followRepository);
+      }
+    } else {
+      // Nostr fallback path: watch to trigger rebuild when ready
+      followRepository = ref.watch(followRepositoryProvider);
+
+      if (followRepository != null) {
+        _setupFollowingStreamListener(followRepository);
+      } else {
+        Log.info(
+          '🏠 HomeFeed: Waiting for FollowRepository (NostrClient not ready) '
+          'and REST API unavailable - keeping provider alive for rebuild',
+          name: 'HomeFeedProvider',
+          category: LogCategory.video,
+        );
+        stopAutoRefresh();
+        return const VideoFeedState(
+          videos: [],
+          hasMoreContent: false,
+          isInitialLoad: true,
+        );
+      }
     }
 
     // Read (not watch) curatedListsState to check if subscribed lists are still loading
@@ -294,31 +322,66 @@ class HomeFeed extends _$HomeFeed {
     final curatedListsState = ref.read(curatedListsStateProvider);
     final isCuratedListsLoading = curatedListsState.isLoading;
 
-    // Watch subscribedListVideoCache - provider will rebuild when cache changes
-    // We listen to the cache's ChangeNotifier to invalidate when list videos change
-    final subscribedListCacheForListener = ref.watch(
-      subscribedListVideoCacheProvider,
-    );
+    // When REST API succeeded, use ref.read to avoid a full rebuild when
+    // the cache transitions from null → ready. The REST API already has
+    // the feed data; we only need the ChangeNotifier for future list changes.
+    SubscribedListVideoCache? subscribedListCacheForListener;
+    if (_usingRestApi) {
+      subscribedListCacheForListener = ref.read(
+        subscribedListVideoCacheProvider,
+      );
+
+      // Listen for cache becoming available (without triggering rebuild)
+      // and refresh from REST API when list videos change
+      ref.listen(subscribedListVideoCacheProvider, (prev, next) {
+        if (next != null && prev == null && ref.mounted) {
+          // Cache just became ready - attach ChangeNotifier listener
+          void onCacheChanged() {
+            if (ref.mounted) {
+              _refreshFromRestApi();
+            }
+          }
+
+          next.addListener(onCacheChanged);
+          ref.onDispose(() {
+            next.removeListener(onCacheChanged);
+          });
+        }
+      });
+    } else {
+      // Nostr fallback path: watch so we rebuild when cache becomes available
+      subscribedListCacheForListener = ref.watch(
+        subscribedListVideoCacheProvider,
+      );
+    }
+
     if (subscribedListCacheForListener != null) {
       void onCacheChanged() {
         Log.debug(
-          '🏠 HomeFeed: SubscribedListVideoCache updated, refreshing from service',
+          '🏠 HomeFeed: SubscribedListVideoCache updated, refreshing',
           name: 'HomeFeedProvider',
           category: LogCategory.video,
         );
         if (ref.mounted) {
-          refreshFromService();
+          if (_usingRestApi) {
+            _refreshFromRestApi();
+          } else {
+            refreshFromService();
+          }
         }
       }
 
       subscribedListCacheForListener.addListener(onCacheChanged);
       ref.onDispose(() {
-        subscribedListCacheForListener.removeListener(onCacheChanged);
+        subscribedListCacheForListener?.removeListener(onCacheChanged);
       });
     }
 
-    // Get following pubkeys (may be empty if followRepository not ready yet)
-    final followingPubkeys = followRepository?.followingPubkeys ?? [];
+    // Get following pubkeys from followRepository, or fall back to cached
+    // list from SharedPreferences (available before NostrClient is ready)
+    final List<String> followingPubkeys =
+        followRepository?.followingPubkeys ??
+        ref.read(cachedFollowingListProvider);
 
     // Even if not following anyone, we might have videos from subscribed lists
     // Need to wait for CuratedListService to initialize before declaring empty
@@ -470,7 +533,7 @@ class HomeFeed extends _$HomeFeed {
       Timer? checkTimer;
 
       void checkCache() {
-        final videos = subscribedListCacheForListener.getVideos();
+        final videos = subscribedListCacheForListener?.getVideos() ?? [];
         if (videos.isNotEmpty) {
           checkTimer?.cancel();
           if (!completer.isCompleted) {
@@ -493,7 +556,7 @@ class HomeFeed extends _$HomeFeed {
 
       // Clean up listener when done
       completer.future.then((_) {
-        subscribedListCacheForListener.removeListener(onCacheUpdate);
+        subscribedListCacheForListener?.removeListener(onCacheUpdate);
       });
 
       // Maximum wait time of 2 seconds (first video notifies immediately now)
@@ -730,6 +793,75 @@ class HomeFeed extends _$HomeFeed {
         category: LogCategory.video,
       );
     }
+  }
+
+  StreamSubscription<List<String>>? _followingSubscription;
+
+  /// Set up a listener on the FollowRepository's followingStream to
+  /// refresh the feed when the user follows/unfollows someone.
+  /// Safe to call multiple times - cancels any existing subscription first.
+  void _setupFollowingStreamListener(FollowRepository followRepository) {
+    // Cancel existing subscription if any (e.g., called from ref.listen)
+    _followingSubscription?.cancel();
+
+    var lastFollowingSet = followRepository.followingPubkeys.toSet();
+    // Track whether we've seen the first real emission. If lastFollowingSet
+    // was empty (async init not done), the first emission is the initial load,
+    // not a user-initiated change — we should just record it, not re-fetch.
+    var isInitialLoad = lastFollowingSet.isEmpty;
+
+    _followingSubscription = followRepository.followingStream
+        .skip(1) // Skip initial replay, only react to NEW emissions
+        .listen((newFollowingList) {
+          final newSet = newFollowingList.toSet();
+          if (newSet.length == lastFollowingSet.length &&
+              newSet.containsAll(lastFollowingSet)) {
+            Log.debug(
+              '🏠 HomeFeed: Following list loaded but unchanged '
+              '(${newSet.length} users) - skipping refresh',
+              name: 'HomeFeedProvider',
+              category: LogCategory.video,
+            );
+            return;
+          }
+
+          // If we started with an empty set, the first emission is async init
+          // completing — not a real follow/unfollow action. The REST API
+          // already knows the user's follows, so just record and skip.
+          if (isInitialLoad && lastFollowingSet.isEmpty) {
+            isInitialLoad = false;
+            lastFollowingSet = newSet;
+            Log.debug(
+              '🏠 HomeFeed: Following list initial load '
+              '(${newSet.length} users) - skipping refresh '
+              '(REST API already has server-side follows)',
+              name: 'HomeFeedProvider',
+              category: LogCategory.video,
+            );
+            return;
+          }
+          isInitialLoad = false;
+          lastFollowingSet = newSet;
+
+          Log.info(
+            '🏠 HomeFeed: Following list CHANGED '
+            '(${newFollowingList.length} users), '
+            'restApiPreferred=$_restApiSucceededOnce',
+            name: 'HomeFeedProvider',
+            category: LogCategory.video,
+          );
+          if (ref.mounted) {
+            if (_restApiSucceededOnce) {
+              _refreshFromRestApi();
+            } else {
+              ref.invalidateSelf();
+            }
+          }
+        });
+
+    ref.onDispose(() {
+      _followingSubscription?.cancel();
+    });
   }
 
   /// Enrich videos with stats and Nostr tags in the background.
@@ -1054,10 +1186,12 @@ class HomeFeed extends _$HomeFeed {
 
     try {
       final analyticsService = ref.read(analyticsApiServiceProvider);
+      final prefs = ref.read(sharedPreferencesProvider);
       final feedResult = await analyticsService.getHomeFeed(
         pubkey: currentUserPubkey,
         limit: 100,
         sort: 'recent',
+        prefs: prefs,
       );
 
       if (!ref.mounted) return;
