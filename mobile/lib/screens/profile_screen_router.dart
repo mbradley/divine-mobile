@@ -471,6 +471,19 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
             ),
           ),
         ),
+        InkWell(
+          onTap: () => Navigator.of(context).pop('embed_code'),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+            child: Row(
+              children: [
+                const Icon(Icons.code, size: 24),
+                const SizedBox(width: 16),
+                Text('Get embed code', style: VineTheme.titleMediumFont()),
+              ],
+            ),
+          ),
+        ),
       ],
     );
 
@@ -484,6 +497,8 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
       await _shareProfile(userIdHex);
     } else if (result == 'copy_npub') {
       await _copyNpub(userIdHex);
+    } else if (result == 'embed_code') {
+      await _copyEmbedCode(userIdHex);
     }
   }
 
@@ -494,6 +509,26 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Public key copied to clipboard')),
+      );
+    }
+  }
+
+  Future<void> _copyEmbedCode(String userIdHex) async {
+    final npub = NostrKeyUtils.encodePubKey(userIdHex);
+    final embedSnippet =
+        '<iframe\n'
+        '  src="https://divine.video/embed?npub=$npub"\n'
+        '  width="350"\n'
+        '  height="380"\n'
+        '  frameborder="0"\n'
+        '  style="border-radius: 12px; border: none;"\n'
+        '  title="Divine Video Widget"\n'
+        '></iframe>';
+    await Clipboard.setData(ClipboardData(text: embedSnippet));
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Embed code copied to clipboard')),
       );
     }
   }
