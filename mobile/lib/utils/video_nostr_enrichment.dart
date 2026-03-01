@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:models/models.dart' hide LogCategory;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart' show Filter;
@@ -113,4 +115,32 @@ Future<List<VideoEvent>> enrichVideosWithNostrTags(
     );
     return videos;
   }
+}
+
+/// Fire-and-forget enrichment that calls [onEnriched] when complete.
+///
+/// Returns the original [videos] immediately. Enrichment runs in the
+/// background; when it finishes, [onEnriched] is called with the
+/// enriched list so the caller can update its state. If enrichment
+/// fails, [onEnriched] is never called and the un-enriched videos
+/// remain visible.
+List<VideoEvent> enrichVideosInBackground(
+  List<VideoEvent> videos, {
+  required NostrClient nostrService,
+  required void Function(List<VideoEvent> enrichedVideos) onEnriched,
+  String callerName = 'VideoEnrichment',
+}) {
+  unawaited(
+    enrichVideosWithNostrTags(
+      videos,
+      nostrService: nostrService,
+      callerName: callerName,
+    ).then((enriched) {
+      // Only call back if enrichment actually changed something
+      if (enriched != videos) {
+        onEnriched(enriched);
+      }
+    }),
+  );
+  return videos;
 }
