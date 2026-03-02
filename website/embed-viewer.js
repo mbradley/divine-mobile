@@ -53,6 +53,8 @@
     // Constants
     // =========================================================================
 
+    // TODO: Hardcoded relay list — if relays change, requires redeployment.
+    // Consider fetching from a config endpoint in the future.
     const RELAYS = [
         'wss://relay.divine.video',
         'wss://relay.damus.io',
@@ -228,22 +230,42 @@
     }
 
     // =========================================================================
-    // HTML escaping
+    // DOM construction helpers (safe against XSS — no innerHTML for user data)
     // =========================================================================
 
-    function escapeHtml(str) {
-        var div = document.createElement('div');
-        div.appendChild(document.createTextNode(str));
-        return div.innerHTML;
+    function el(tag, attrs, children) {
+        var node = document.createElement(tag);
+        if (attrs) {
+            for (var key in attrs) {
+                if (key === 'textContent') {
+                    node.textContent = attrs[key];
+                } else if (key === 'className') {
+                    node.className = attrs[key];
+                } else {
+                    node.setAttribute(key, attrs[key]);
+                }
+            }
+        }
+        if (children) {
+            for (var i = 0; i < children.length; i++) {
+                if (typeof children[i] === 'string') {
+                    node.appendChild(document.createTextNode(children[i]));
+                } else if (children[i]) {
+                    node.appendChild(children[i]);
+                }
+            }
+        }
+        return node;
     }
 
     // =========================================================================
-    // Rendering
+    // Rendering (uses programmatic DOM construction to prevent XSS)
     // =========================================================================
 
     function renderProfile(profileEvt, npub) {
-        var el = document.getElementById('embed-profile');
-        if (!el) return;
+        var container = document.getElementById('embed-profile');
+        if (!container) return;
+        container.innerHTML = '';
 
         var name = 'Anonymous';
         var bio = '';
@@ -259,65 +281,118 @@
         }
 
         var profileUrl = 'https://divine.video/profile/' + encodeURIComponent(npub);
-        var avatarHtml = picture
-            ? '<img src="' + escapeHtml(picture) + '" alt="" onerror="this.parentElement.textContent=\'' + escapeHtml(name.charAt(0).toUpperCase()) + '\'">'
-            : escapeHtml(name.charAt(0).toUpperCase());
+        var initial = name.charAt(0).toUpperCase();
 
-        el.innerHTML =
-            '<a class="embed-profile" href="' + profileUrl + '" target="_blank" rel="noopener">' +
-                '<div class="embed-avatar">' + avatarHtml + '</div>' +
-                '<div class="embed-profile-info">' +
-                    '<div class="embed-profile-name">' + escapeHtml(name) + '</div>' +
-                    (bio ? '<div class="embed-profile-bio">' + escapeHtml(bio.slice(0, 120)) + '</div>' : '') +
-                '</div>' +
-            '</a>';
+        // Build avatar
+        var avatarDiv = el('div', { className: 'embed-avatar' });
+        if (picture) {
+            var img = el('img', { src: picture, alt: '' });
+            img.onerror = function () {
+                avatarDiv.textContent = initial;
+            };
+            avatarDiv.appendChild(img);
+        } else {
+            avatarDiv.textContent = initial;
+        }
+
+        // Build profile info
+        var infoChildren = [
+            el('div', { className: 'embed-profile-name', textContent: name }),
+        ];
+        if (bio) {
+            infoChildren.push(
+                el('div', { className: 'embed-profile-bio', textContent: bio.slice(0, 120) })
+            );
+        }
+        var infoDiv = el('div', { className: 'embed-profile-info' }, infoChildren);
+
+        // Build link wrapper
+        var link = el('a', {
+            className: 'embed-profile',
+            href: profileUrl,
+            target: '_blank',
+            rel: 'noopener',
+        }, [avatarDiv, infoDiv]);
+
+        container.appendChild(link);
     }
 
     function renderVideos(videos, npub) {
-        var el = document.getElementById('embed-videos');
-        if (!el) return;
+        var container = document.getElementById('embed-videos');
+        if (!container) return;
+        container.innerHTML = '';
 
         if (videos.length === 0) {
-            el.innerHTML = '<div class="embed-empty">No videos yet</div>';
+            container.appendChild(
+                el('div', { className: 'embed-empty', textContent: 'No videos yet' })
+            );
             return;
         }
 
-        var html = '';
         for (var i = 0; i < videos.length; i++) {
             var v = parseVideoEvent(videos[i]);
             var videoUrl = 'https://divine.video/v/' + encodeURIComponent(v.dTag);
 
-            var thumbHtml = v.thumb
-                ? '<img src="' + escapeHtml(v.thumb) + '" alt="" loading="lazy" onerror="this.outerHTML=\'<div class=no-thumb>&#9654;</div>\'">'
-                : '<div class="no-thumb">&#9654;</div>';
+            // Build thumbnail
+            var thumbWrapper = el('div', { className: 'embed-thumb-wrapper' });
+            if (v.thumb) {
+                var thumbImg = el('img', { src: v.thumb, alt: '', loading: 'lazy' });
+                thumbImg.onerror = function () {
+                    var fallback = el('div', { className: 'no-thumb' }, ['\u25B6']);
+                    this.parentElement.replaceChild(fallback, this);
+                };
+                thumbWrapper.appendChild(thumbImg);
+            } else {
+                thumbWrapper.appendChild(
+                    el('div', { className: 'no-thumb' }, ['\u25B6'])
+                );
+            }
 
-            html +=
-                '<div class="embed-video-card">' +
-                    '<a href="' + videoUrl + '" target="_blank" rel="noopener">' +
-                        '<div class="embed-thumb-wrapper">' +
-                            thumbHtml +
-                            '<div class="embed-play-overlay">' +
-                                '<svg viewBox="0 0 24 24"><polygon points="8,5 19,12 8,19"/></svg>' +
-                            '</div>' +
-                        '</div>' +
-                        '<div class="embed-video-info">' +
-                            (v.title ? '<div class="embed-video-title">' + escapeHtml(v.title) + '</div>' : '') +
-                            '<div class="embed-video-time">' + relativeTime(v.createdAt) + '</div>' +
-                        '</div>' +
-                    '</a>' +
-                '</div>';
+            // Play overlay (static SVG — safe to use innerHTML for known constant)
+            var playOverlay = el('div', { className: 'embed-play-overlay' });
+            playOverlay.innerHTML = '<svg viewBox="0 0 24 24"><polygon points="8,5 19,12 8,19"/></svg>';
+            thumbWrapper.appendChild(playOverlay);
+
+            // Build video info
+            var infoChildren = [];
+            if (v.title) {
+                infoChildren.push(
+                    el('div', { className: 'embed-video-title', textContent: v.title })
+                );
+            }
+            infoChildren.push(
+                el('div', { className: 'embed-video-time', textContent: relativeTime(v.createdAt) })
+            );
+            var infoDiv = el('div', { className: 'embed-video-info' }, infoChildren);
+
+            // Build card
+            var link = el('a', {
+                href: videoUrl,
+                target: '_blank',
+                rel: 'noopener',
+            }, [thumbWrapper, infoDiv]);
+
+            container.appendChild(
+                el('div', { className: 'embed-video-card' }, [link])
+            );
         }
-        el.innerHTML = html;
     }
 
     function renderCta(npub) {
-        var el = document.getElementById('embed-cta');
-        if (!el) return;
+        var container = document.getElementById('embed-cta');
+        if (!container) return;
+        container.innerHTML = '';
+
         var profileUrl = 'https://divine.video/profile/' + encodeURIComponent(npub);
-        el.innerHTML =
-            '<a class="embed-cta" href="' + profileUrl + '" target="_blank" rel="noopener">' +
-                'View on Divine' +
-            '</a>';
+        container.appendChild(
+            el('a', {
+                className: 'embed-cta',
+                href: profileUrl,
+                target: '_blank',
+                rel: 'noopener',
+                textContent: 'View on Divine',
+            })
+        );
     }
 
     function showLoading() {
@@ -335,13 +410,15 @@
     }
 
     function showError(message) {
-        var el = document.getElementById('embed-loading');
-        if (el) {
-            el.innerHTML =
-                '<div class="embed-error">' +
-                    '<div class="embed-error-icon">&#9888;</div>' +
-                    '<div>' + escapeHtml(message) + '</div>' +
-                '</div>';
+        var container = document.getElementById('embed-loading');
+        if (container) {
+            container.innerHTML = '';
+            container.appendChild(
+                el('div', { className: 'embed-error' }, [
+                    el('div', { className: 'embed-error-icon', textContent: '\u26A0' }),
+                    el('div', { textContent: message }),
+                ])
+            );
         }
     }
 

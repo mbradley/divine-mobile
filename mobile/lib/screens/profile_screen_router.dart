@@ -520,7 +520,6 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
         '  src="https://divine.video/embed?npub=$npub"\n'
         '  width="350"\n'
         '  height="380"\n'
-        '  frameborder="0"\n'
         '  style="border-radius: 12px; border: none;"\n'
         '  title="Divine Video Widget"\n'
         '></iframe>';

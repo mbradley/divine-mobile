@@ -1,12 +1,10 @@
 # OpenVine Website Headers
 
 /embed.html
-  X-Frame-Options: ALLOWALL
   Content-Security-Policy: frame-ancestors *
   Cache-Control: public, max-age=1800
 
 /embed
-  X-Frame-Options: ALLOWALL
   Content-Security-Policy: frame-ancestors *
   Cache-Control: public, max-age=1800
 
