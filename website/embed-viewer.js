@@ -198,8 +198,8 @@
     }
 
     function parseVideoEvent(evt) {
-        var url = getTagValue(evt.tags, 'url') || getImetaUrl(evt.tags);
-        var thumb = getTagValue(evt.tags, 'thumb') || getImetaThumb(evt.tags);
+        var url = getImetaUrl(evt.tags) || getTagValue(evt.tags, 'url');
+        var thumb = getImetaThumb(evt.tags) || getTagValue(evt.tags, 'thumb');
         var title = getTagValue(evt.tags, 'title') || evt.content || '';
         var dTag = getTagValue(evt.tags, 'd') || evt.id;
 
@@ -311,7 +311,7 @@
             className: 'embed-profile',
             href: profileUrl,
             target: '_blank',
-            rel: 'noopener',
+            rel: 'noopener noreferrer',
         }, [avatarDiv, infoDiv]);
 
         container.appendChild(link);
@@ -369,7 +369,7 @@
             var link = el('a', {
                 href: videoUrl,
                 target: '_blank',
-                rel: 'noopener',
+                rel: 'noopener noreferrer',
             }, [thumbWrapper, infoDiv]);
 
             container.appendChild(
@@ -389,7 +389,7 @@
                 className: 'embed-cta',
                 href: profileUrl,
                 target: '_blank',
-                rel: 'noopener',
+                rel: 'noopener noreferrer',
                 textContent: 'View on Divine',
             })
         );
@@ -432,7 +432,10 @@
             npub: params.get('npub') || '',
             theme: params.get('theme') || 'dark',
             count: Math.min(Math.max(parseInt(params.get('count'), 10) || 1, 1), 5),
-            autorefresh: Math.max(parseInt(params.get('autorefresh'), 10) || 60, 5)
+            autorefresh: (function () {
+                var raw = parseInt(params.get('autorefresh'), 10);
+                return isNaN(raw) ? 60 : Math.max(raw, 0);
+            })()
         };
     }
 

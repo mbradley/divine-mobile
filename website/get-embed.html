@@ -244,7 +244,11 @@
             function update() {
                 var qs = getEmbedParams();
                 if (!qs) {
-                    previewFrame.innerHTML = '<div class="placeholder-msg">Enter your npub above to see a preview</div>';
+                    previewFrame.innerHTML = '';
+                    var placeholder = document.createElement('div');
+                    placeholder.className = 'placeholder-msg';
+                    placeholder.textContent = 'Enter your npub above to see a preview';
+                    previewFrame.appendChild(placeholder);
                     codeSection.style.display = 'none';
                     return;
                 }
@@ -254,10 +258,15 @@
                 // Use embed.html directly (works both locally and with redirects)
                 var previewUrl = '/embed.html?' + qs;
 
-                // Update preview (use relative URL so it works locally)
-                previewFrame.innerHTML =
-                    '<iframe src="' + previewUrl + '" width="350" height="' + height + '" ' +
-                    'style="border:none; border-radius:12px;" title="Divine Video Widget"></iframe>';
+                // Update preview using safe DOM construction (avoid innerHTML with user input)
+                previewFrame.innerHTML = '';
+                var iframe = document.createElement('iframe');
+                iframe.src = previewUrl;
+                iframe.width = '350';
+                iframe.height = String(height);
+                iframe.style.cssText = 'border:none; border-radius:12px;';
+                iframe.title = 'Divine Video Widget';
+                previewFrame.appendChild(iframe);
 
                 // Update embed code (always uses production URL)
                 var snippet =

@@ -50,7 +50,6 @@ body {
     max-width: 500px;
     margin: 0 auto;
     padding: 16px;
-    min-height: 100vh;
     display: flex;
     flex-direction: column;
 }
@@ -176,7 +175,7 @@ body {
 .embed-play-overlay svg {
     width: 20px;
     height: 20px;
-    fill: #FFFFFF;
+    fill: var(--play-fill);
     margin-left: 3px;
 }
 
