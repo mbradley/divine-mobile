@@ -30,6 +30,8 @@ void main() {
 
     const testPubkey =
         'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2';
+    const otherPubkey =
+        'b1b2c3d4e5f6b1b2c3d4e5f6b1b2c3d4e5f6b1b2c3d4e5f6b1b2c3d4e5f6b1b2';
     const testEventId =
         'f1e2d3c4b5a6f1e2d3c4b5a6f1e2d3c4b5a6f1e2d3c4b5a6f1e2d3c4b5a6f1e2';
 
@@ -1746,8 +1748,7 @@ void main() {
                 'ok': true,
                 'available': false,
                 'status': 'active',
-                'pubkey':
-                    'different_pubkey_000000000000000000000000000000000000000000',
+                'pubkey': otherPubkey,
                 'reason': 'Username is already taken',
               }),
               200,
