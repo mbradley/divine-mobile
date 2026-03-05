@@ -150,11 +150,11 @@ void main() {
       await tester.pump();
 
       verify(
-        mockBugReportService.collectDiagnostics(
-          userDescription: anyNamed('userDescription'),
-          currentScreen: anyNamed('currentScreen'),
-          userPubkey: anyNamed('userPubkey'),
-          additionalContext: anyNamed('additionalContext'),
+        () => mockBugReportService.collectDiagnostics(
+          userDescription: any(named: 'userDescription'),
+          currentScreen: any(named: 'currentScreen'),
+          userPubkey: any(named: 'userPubkey'),
+          additionalContext: any(named: 'additionalContext'),
         ),
       ).called(1);
     });
