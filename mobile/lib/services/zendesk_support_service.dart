@@ -369,7 +369,7 @@ class ZendeskSupportService {
         'subject': subject,
         'description': description,
         'tags': tags ?? [],
-        if (ticketFormId != null) 'ticketFormId': ticketFormId,
+        'ticketFormId': ?ticketFormId,
         if (customFields != null && customFields.isNotEmpty)
           'customFields': customFields,
       });
@@ -589,11 +589,11 @@ class ZendeskSupportService {
   static Future<bool> createStructuredBugReport({
     required String subject,
     required String description,
-    String? stepsToReproduce,
-    String? expectedBehavior,
     required String reportId,
     required String appVersion,
     required Map<String, dynamic> deviceInfo,
+    String? stepsToReproduce,
+    String? expectedBehavior,
     String? currentScreen,
     String? userPubkey,
     Map<String, int>? errorCounts,
@@ -621,19 +621,19 @@ class ZendeskSupportService {
     buffer.writeln('## Bug Report');
     buffer.writeln('**Report ID:** $reportId');
     buffer.writeln('**App Version:** $appVersion');
-    buffer.writeln('');
+    buffer.writeln();
     buffer.writeln('### Description');
     buffer.writeln(description);
-    buffer.writeln('');
+    buffer.writeln();
     if (stepsToReproduce != null && stepsToReproduce.isNotEmpty) {
       buffer.writeln('### Steps to Reproduce');
       buffer.writeln(stepsToReproduce);
-      buffer.writeln('');
+      buffer.writeln();
     }
     if (expectedBehavior != null && expectedBehavior.isNotEmpty) {
       buffer.writeln('### Expected Behavior');
       buffer.writeln(expectedBehavior);
-      buffer.writeln('');
+      buffer.writeln();
     }
     buffer.writeln('### Device Information');
     deviceInfo.forEach((key, value) {
@@ -750,8 +750,8 @@ class ZendeskSupportService {
         },
       };
 
-      final apiUrl = '${ZendeskConfig.zendeskUrl}/api/v2/tickets.json';
-      final credentials =
+      const apiUrl = '${ZendeskConfig.zendeskUrl}/api/v2/tickets.json';
+      const credentials =
           '${ZendeskConfig.apiEmail}/token:${ZendeskConfig.apiToken}';
       final encodedCredentials = base64Encode(utf8.encode(credentials));
 
@@ -815,22 +815,22 @@ class ZendeskSupportService {
     // Build ticket description
     final buffer = StringBuffer();
     buffer.writeln('## Feature Request');
-    buffer.writeln('');
+    buffer.writeln();
     buffer.writeln('### What would you like?');
     buffer.writeln(description);
     if (usefulness != null && usefulness.isNotEmpty) {
-      buffer.writeln('');
+      buffer.writeln();
       buffer.writeln('### How would this be useful for you?');
       buffer.writeln(usefulness);
     }
     if (whenToUse != null && whenToUse.isNotEmpty) {
-      buffer.writeln('');
+      buffer.writeln();
       buffer.writeln('### When would you use this?');
       buffer.writeln(whenToUse);
     }
     final effectivePubkey = userPubkey ?? _userNpub;
     if (effectivePubkey != null) {
-      buffer.writeln('');
+      buffer.writeln();
       buffer.writeln('**User Pubkey:** $effectivePubkey');
     }
 

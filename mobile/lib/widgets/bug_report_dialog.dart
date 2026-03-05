@@ -158,7 +158,6 @@ class _BugReportDialogState extends State<BugReportDialog> {
               // Subject field (required)
               TextField(
                 controller: _subjectController,
-                maxLines: 1,
                 enabled: !_isSubmitting,
                 style: const TextStyle(color: VineTheme.whiteText),
                 decoration: buildSupportInputDecoration(

@@ -3,10 +3,11 @@
 // ABOUTME: Submits directly to Zendesk via SDK or REST API with custom fields
 
 import 'dart:async';
+
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/services/zendesk_support_service.dart';
-import 'package:divine_ui/divine_ui.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/widgets/support_dialog_utils.dart';
 
@@ -126,7 +127,6 @@ class _FeatureRequestDialogState extends State<FeatureRequestDialog> {
               // Subject field (required)
               TextField(
                 controller: _subjectController,
-                maxLines: 1,
                 enabled: !_isSubmitting,
                 style: const TextStyle(color: VineTheme.whiteText),
                 decoration: buildSupportInputDecoration(
@@ -209,7 +209,6 @@ class _FeatureRequestDialogState extends State<FeatureRequestDialog> {
                       color: _isSuccess == true
                           ? VineTheme.vineGreen
                           : Colors.red,
-                      width: 1,
                     ),
                   ),
                   child: Text(

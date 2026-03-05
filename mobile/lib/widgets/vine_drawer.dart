@@ -405,6 +405,8 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
       await ZendeskSupportService.setJwtIdentity(npub);
     }
 
+    if (!context.mounted) return;
+
     // Always use custom dialog for bug reports (supports structured fields)
     Log.debug('🐛 Opening bug report dialog', category: LogCategory.ui);
     _showSupportFallbackWithServices(context, bugReportService, userPubkey);

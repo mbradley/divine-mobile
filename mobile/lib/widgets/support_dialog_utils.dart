@@ -1,8 +1,8 @@
 // ABOUTME: Shared utilities for support dialogs (bug reports, feature requests)
 // ABOUTME: Contains common input decoration styling for consistency
 
-import 'package:flutter/material.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/material.dart';
 
 /// Build consistent input decoration for support dialog text fields
 InputDecoration buildSupportInputDecoration({
