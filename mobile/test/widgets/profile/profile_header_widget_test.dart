@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +13,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/blocs/email_verification/email_verification_cubit.dart';
+import 'package:openvine/blocs/my_profile/my_profile_bloc.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/repositories/follow_repository.dart';
@@ -21,6 +23,9 @@ import 'package:openvine/widgets/user_avatar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../helpers/test_provider_overrides.dart';
+
+class _MockMyProfileBloc extends MockBloc<MyProfileEvent, MyProfileState>
+    implements MyProfileBloc {}
 
 // Mock for KeycastOAuth used by EmailVerificationCubit
 class MockKeycastOAuth extends Mock implements KeycastOAuth {}
@@ -155,9 +160,36 @@ void main() {
     }) {
       final authService = MockAuthService(isAnonymousValue: isAnonymous);
       final mockUserProfileService = createMockUserProfileService();
+
+      Widget header = ProfileHeaderWidget(
+        userIdHex: userIdHex,
+        isOwnProfile: isOwnProfile,
+        videoCount: videoCount,
+        profileStatsAsync: profileStatsAsync,
+        onSetupProfile: onSetupProfile,
+        displayNameHint: displayNameHint,
+        avatarUrlHint: avatarUrlHint,
+      );
+
+      if (isOwnProfile) {
+        final mockMyProfileBloc = _MockMyProfileBloc();
+        if (profile != null) {
+          when(() => mockMyProfileBloc.state).thenReturn(
+            MyProfileUpdated(profile: profile),
+          );
+        } else {
+          when(() => mockMyProfileBloc.state).thenReturn(
+            const MyProfileInitial(),
+          );
+        }
+        header = BlocProvider<MyProfileBloc>.value(
+          value: mockMyProfileBloc,
+          child: header,
+        );
+      }
+
       return ProviderScope(
         overrides: [
-          // Pass test's mock so we don't duplicate nostrServiceProvider override
           ...getStandardTestOverrides(
             mockNostrService: mockNostrClient,
             mockUserProfileService: mockUserProfileService,
@@ -180,17 +212,7 @@ void main() {
           ),
           child: MaterialApp(
             home: Scaffold(
-              body: SingleChildScrollView(
-                child: ProfileHeaderWidget(
-                  userIdHex: userIdHex,
-                  isOwnProfile: isOwnProfile,
-                  videoCount: videoCount,
-                  profileStatsAsync: profileStatsAsync,
-                  onSetupProfile: onSetupProfile,
-                  displayNameHint: displayNameHint,
-                  avatarUrlHint: avatarUrlHint,
-                ),
-              ),
+              body: SingleChildScrollView(child: header),
             ),
           ),
         ),
