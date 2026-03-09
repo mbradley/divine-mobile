@@ -31,7 +31,6 @@ class ProfileHeaderWidget extends ConsumerWidget {
     required this.userIdHex,
     required this.isOwnProfile,
     required this.videoCount,
-    required this.profileStatsAsync,
     this.onSetupProfile,
     this.displayNameHint,
     this.avatarUrlHint,
@@ -46,9 +45,6 @@ class ProfileHeaderWidget extends ConsumerWidget {
 
   /// The number of videos loaded in the profile grid.
   final int videoCount;
-
-  /// Async value containing profile stats (video count, etc.).
-  final AsyncValue<ProfileStats> profileStatsAsync;
 
   /// Callback when "Set Up" button is tapped on the setup banner.
   /// Only shown for own profile with default name.

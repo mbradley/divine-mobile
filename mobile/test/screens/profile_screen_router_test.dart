@@ -331,7 +331,6 @@ void main() {
                 isOwnProfile: true,
                 videos: const [],
                 videoIndex: null,
-                profileStatsAsync: const AsyncValue.loading(),
                 scrollController: scrollController,
                 onSetupProfile: () {},
                 onEditProfile: () {},

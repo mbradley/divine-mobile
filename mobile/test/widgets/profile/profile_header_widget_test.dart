@@ -125,18 +125,6 @@ void main() {
       );
     }
 
-    ProfileStats createTestStats() {
-      return ProfileStats(
-        pubkey: testUserHex,
-        videoCount: 10,
-        totalViews: 1000,
-        totalLikes: 500,
-        followers: 100,
-        following: 50,
-        lastUpdated: DateTime.now(),
-      );
-    }
-
     setUp(() {
       mockFollowRepository = MockFollowRepository();
       mockNostrClient = MockNostrClient();
@@ -149,7 +137,6 @@ void main() {
     Widget buildTestWidget({
       required String userIdHex,
       required bool isOwnProfile,
-      required AsyncValue<ProfileStats> profileStatsAsync,
       int videoCount = 10,
       UserProfile? profile,
       bool profileIsLoading = false,
@@ -165,7 +152,6 @@ void main() {
         userIdHex: userIdHex,
         isOwnProfile: isOwnProfile,
         videoCount: videoCount,
-        profileStatsAsync: profileStatsAsync,
         onSetupProfile: onSetupProfile,
         displayNameHint: displayNameHint,
         avatarUrlHint: avatarUrlHint,
@@ -232,7 +218,7 @@ void main() {
         buildTestWidget(
           userIdHex: testUserHex,
           isOwnProfile: true,
-          profileStatsAsync: AsyncValue.data(createTestStats()),
+
           profile: testProfile,
         ),
       );
@@ -248,7 +234,7 @@ void main() {
         buildTestWidget(
           userIdHex: testUserHex,
           isOwnProfile: true,
-          profileStatsAsync: AsyncValue.data(createTestStats()),
+
           profile: testProfile,
         ),
       );
@@ -269,7 +255,7 @@ void main() {
         buildTestWidget(
           userIdHex: testUserHex,
           isOwnProfile: true,
-          profileStatsAsync: AsyncValue.data(createTestStats()),
+
           profile: testProfile,
         ),
       );
@@ -288,7 +274,7 @@ void main() {
         buildTestWidget(
           userIdHex: testUserHex,
           isOwnProfile: true,
-          profileStatsAsync: AsyncValue.data(createTestStats()),
+
           profile: testProfile,
         ),
       );
@@ -307,7 +293,7 @@ void main() {
         buildTestWidget(
           userIdHex: testUserHex,
           isOwnProfile: true,
-          profileStatsAsync: AsyncValue.data(createTestStats()),
+
           profile: profileWithDefaultName,
           onSetupProfile: () => setupCalled = true,
         ),
@@ -330,7 +316,6 @@ void main() {
           buildTestWidget(
             userIdHex: testUserHex,
             isOwnProfile: true,
-            profileStatsAsync: AsyncValue.data(createTestStats()),
             profileIsLoading: true,
             onSetupProfile: () {},
           ),
@@ -351,7 +336,7 @@ void main() {
         buildTestWidget(
           userIdHex: testUserHex,
           isOwnProfile: true,
-          profileStatsAsync: AsyncValue.data(createTestStats()),
+
           profile: testProfile,
           onSetupProfile: () {},
         ),
@@ -368,7 +353,7 @@ void main() {
         buildTestWidget(
           userIdHex: testUserHex,
           isOwnProfile: false,
-          profileStatsAsync: AsyncValue.data(createTestStats()),
+
           profile: profileWithDefaultName,
           onSetupProfile: () {},
         ),
@@ -387,7 +372,7 @@ void main() {
           buildTestWidget(
             userIdHex: testUserHex,
             isOwnProfile: false,
-            profileStatsAsync: AsyncValue.data(createTestStats()),
+
             displayNameHint: 'Unknown',
             avatarUrlHint: 'https://example.com/fallback.png',
           ),
@@ -418,7 +403,7 @@ void main() {
           buildTestWidget(
             userIdHex: testUserHex,
             isOwnProfile: true,
-            profileStatsAsync: AsyncValue.data(createTestStats()),
+
             profile: testProfile,
           ),
         );
@@ -446,7 +431,7 @@ void main() {
           buildTestWidget(
             userIdHex: testUserHex,
             isOwnProfile: true,
-            profileStatsAsync: AsyncValue.data(createTestStats()),
+
             profile: testProfile,
           ),
         );
@@ -473,7 +458,7 @@ void main() {
           buildTestWidget(
             userIdHex: testUserHex,
             isOwnProfile: true,
-            profileStatsAsync: AsyncValue.data(createTestStats()),
+
             profile: testProfile,
           ),
         );
@@ -505,7 +490,7 @@ void main() {
           buildTestWidget(
             userIdHex: testUserHex,
             isOwnProfile: true,
-            profileStatsAsync: AsyncValue.data(createTestStats()),
+
             profile: testProfile,
           ),
         );
@@ -535,7 +520,7 @@ void main() {
             buildTestWidget(
               userIdHex: testUserHex,
               isOwnProfile: true,
-              profileStatsAsync: AsyncValue.data(createTestStats()),
+
               profile: testProfile,
               isAnonymous: true,
             ),
@@ -562,7 +547,7 @@ void main() {
             buildTestWidget(
               userIdHex: testUserHex,
               isOwnProfile: true,
-              profileStatsAsync: AsyncValue.data(createTestStats()),
+
               profile: testProfile,
             ),
           );
@@ -581,7 +566,7 @@ void main() {
             buildTestWidget(
               userIdHex: testUserHex,
               isOwnProfile: false,
-              profileStatsAsync: AsyncValue.data(createTestStats()),
+
               profile: testProfile,
               isAnonymous: true,
             ),
@@ -601,7 +586,7 @@ void main() {
           buildTestWidget(
             userIdHex: testUserHex,
             isOwnProfile: true,
-            profileStatsAsync: AsyncValue.data(createTestStats()),
+
             profile: testProfile,
             isAnonymous: true,
           ),

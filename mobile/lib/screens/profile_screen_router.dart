@@ -15,7 +15,6 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/overlay_visibility_provider.dart';
 import 'package:openvine/providers/profile_feed_provider.dart';
-import 'package:openvine/providers/profile_stats_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/creator_analytics_screen.dart';
@@ -136,9 +135,6 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
   Future<void> _doRefresh(String userIdHex) async {
     // Refresh videos from provider
     await ref.read(profileFeedProvider(userIdHex).notifier).refresh();
-
-    // Invalidate stats to recompute
-    ref.invalidate(fetchProfileStatsProvider(userIdHex));
 
     // Refresh user profile info
     ref.read(userProfileServiceProvider).fetchProfile(userIdHex);
@@ -651,9 +647,6 @@ class _ProfileDataView extends ConsumerWidget {
     // Get video data from profile feed
     final videosAsync = ref.watch(profileFeedProvider(userIdHex));
 
-    // Get profile stats
-    final profileStatsAsync = ref.watch(fetchProfileStatsProvider(userIdHex));
-
     if (videosAsync is AsyncData) {
       ScreenAnalyticsService().markDataLoaded(
         'own_profile',
@@ -689,7 +682,6 @@ class _ProfileDataView extends ConsumerWidget {
           displayName: displayName,
           videos: value.videos,
           videoIndex: videoIndex,
-          profileStatsAsync: profileStatsAsync,
           scrollController: scrollController,
           onSetupProfile: onSetupProfile,
           onEditProfile: onEditProfile,
@@ -712,7 +704,6 @@ class ProfileViewSwitcher extends StatelessWidget {
     required this.isOwnProfile,
     required this.videos,
     required this.videoIndex,
-    required this.profileStatsAsync,
     required this.scrollController,
     required this.onSetupProfile,
     required this.onEditProfile,
@@ -729,7 +720,6 @@ class ProfileViewSwitcher extends StatelessWidget {
   final String? displayName;
   final List<VideoEvent> videos;
   final int? videoIndex;
-  final AsyncValue<ProfileStats> profileStatsAsync;
   final ScrollController scrollController;
   final VoidCallback onSetupProfile;
   final VoidCallback onEditProfile;
@@ -764,7 +754,6 @@ class ProfileViewSwitcher extends StatelessWidget {
             isOwnProfile: isOwnProfile,
             displayName: displayName,
             videos: videos,
-            profileStatsAsync: profileStatsAsync,
             scrollController: scrollController,
             onSetupProfile: onSetupProfile,
             onEditProfile: onEditProfile,
