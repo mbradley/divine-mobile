@@ -428,6 +428,126 @@ void main() {
     });
   });
 
+  group('ZendeskSupportService.createStructuredBugReport fallback', () {
+    test('uses native SDK when initialized', () async {
+      var createTicketCalled = false;
+      String? capturedSubject;
+      List<dynamic>? capturedCustomFields;
+
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (MethodCall call) async {
+            if (call.method == 'initialize') return true;
+            if (call.method == 'createTicket') {
+              createTicketCalled = true;
+              capturedSubject = call.arguments['subject'] as String?;
+              capturedCustomFields =
+                  call.arguments['customFields'] as List<dynamic>?;
+              return true;
+            }
+            return null;
+          });
+
+      await ZendeskSupportService.initialize(
+        appId: 'test',
+        clientId: 'test',
+        zendeskUrl: 'https://test.zendesk.com',
+      );
+
+      final result = await ZendeskSupportService.createStructuredBugReport(
+        subject: 'Test Bug',
+        description: 'Something broke',
+        reportId: 'test-report-123',
+        appVersion: '1.0.0+42',
+        deviceInfo: {'platform': 'ios', 'version': '17.0', 'model': 'iPhone'},
+        stepsToReproduce: '1. Tap button\n2. See crash',
+        expectedBehavior: 'Should not crash',
+      );
+
+      expect(result, isTrue);
+      expect(createTicketCalled, isTrue);
+      expect(capturedSubject, 'Test Bug');
+      // Verify custom fields include platform, OS version, build number
+      expect(capturedCustomFields, isNotNull);
+      final fieldIds = capturedCustomFields!
+          .map((f) => (f as Map)['id'])
+          .toList();
+      // Platform field
+      expect(fieldIds, contains(14884176561807));
+      // OS Version field
+      expect(fieldIds, contains(14884157556111));
+      // Build Number field
+      expect(fieldIds, contains(14884184890511));
+      // Steps to Reproduce field (optional, but provided)
+      expect(fieldIds, contains(14677364166031));
+      // Expected Behavior field (optional, but provided)
+      expect(fieldIds, contains(14677341431695));
+    });
+
+    test('falls back to REST API when SDK not initialized', () async {
+      // Reset _initialized by calling initialize with a handler that fails
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (MethodCall call) async {
+            if (call.method == 'initialize') return false;
+            return null;
+          });
+
+      await ZendeskSupportService.initialize(
+        appId: 'test',
+        clientId: 'test',
+        zendeskUrl: 'https://test.zendesk.com',
+      );
+
+      // SDK not initialized → falls to REST API → but API token not configured
+      // in test env, so returns false
+      final result = await ZendeskSupportService.createStructuredBugReport(
+        subject: 'Test Bug',
+        description: 'Something broke',
+        reportId: 'test-report-456',
+        appVersion: '1.0.0+42',
+        deviceInfo: {'platform': 'android', 'version': '14'},
+      );
+
+      // Without ZENDESK_API_TOKEN, REST API fallback returns false
+      expect(result, isFalse);
+    });
+
+    test('extracts build number from appVersion correctly', () async {
+      List<dynamic>? capturedCustomFields;
+
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (MethodCall call) async {
+            if (call.method == 'initialize') return true;
+            if (call.method == 'createTicket') {
+              capturedCustomFields =
+                  call.arguments['customFields'] as List<dynamic>?;
+              return true;
+            }
+            return null;
+          });
+
+      await ZendeskSupportService.initialize(
+        appId: 'test',
+        clientId: 'test',
+        zendeskUrl: 'https://test.zendesk.com',
+      );
+
+      await ZendeskSupportService.createStructuredBugReport(
+        subject: 'Test',
+        description: 'Test',
+        reportId: 'test-789',
+        appVersion: '2.1.0+99',
+        deviceInfo: {'platform': 'ios', 'version': '18.0'},
+      );
+
+      // Verify build number extracted from "2.1.0+99" → "99"
+      expect(capturedCustomFields, isNotNull);
+      final buildField = capturedCustomFields!.firstWhere(
+        (f) => (f as Map)['id'] == 14884184890511,
+      );
+      expect((buildField as Map)['value'], '99');
+    });
+  });
+
   group('ZendeskSupportService REST API', () {
     test('isRestApiAvailable returns false when token not configured', () {
       // ZendeskConfig uses String.fromEnvironment which defaults to ''

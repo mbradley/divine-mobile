@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' show BugReportData;
 import 'package:openvine/services/bug_report_service.dart';
@@ -211,19 +212,21 @@ void main() {
       await tester.pumpAndSettle();
     });
 
-    testWidgets(
-      'should close dialog on Cancel',
-      skip: true, // TODO: Fix Cancel handler exception
-      (tester) async {
-        var dialogClosed = false;
+    testWidgets('should close dialog on Cancel', (tester) async {
+      // GoRouter is needed so context.pop() (GoRouter extension) works.
+      // showDialog is used so context.pop() pops the dialog route,
+      // matching production usage.
+      var dialogClosed = false;
 
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, state) => Scaffold(
               body: Builder(
                 builder: (context) => ElevatedButton(
                   onPressed: () async {
-                    await showDialog(
+                    await showDialog<void>(
                       context: context,
                       builder: (_) => BugReportDialog(
                         bugReportService: mockBugReportService,
@@ -236,18 +239,21 @@ void main() {
               ),
             ),
           ),
-        );
+        ],
+      );
 
-        await tester.tap(find.text('Open'));
-        await tester.pumpAndSettle();
+      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      await tester.pumpAndSettle();
 
-        expect(find.text('Report a Bug'), findsOneWidget);
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
 
-        await tester.tap(find.text('Cancel'));
-        await tester.pumpAndSettle();
+      expect(find.text('Report a Bug'), findsOneWidget);
 
-        expect(dialogClosed, isTrue);
-      },
-    );
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(dialogClosed, isTrue);
+    });
   });
 }
