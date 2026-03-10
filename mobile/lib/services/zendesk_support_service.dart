@@ -31,7 +31,6 @@ class ZendeskSupportService {
   /// JWT authentication state (for native SDK ticket history)
   static String? _cachedJwt;
 
-
   /// Initialize Zendesk SDK
   ///
   /// Call once at app startup. Returns true if initialization successful.

@@ -388,7 +388,6 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
     );
   }
 
-
   /// Handle bug report submission
   /// Uses JWT identity for SDK ticket creation (enables View Past Messages)
   Future<void> _handleBugReportWithServices(

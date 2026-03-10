@@ -133,37 +133,39 @@ void main() {
       expect(result.messageEventId, equals('event-abc123'));
     });
 
-    test('returns partial success when DM fails but Blossom URL exists',
-        () async {
-      when(
-        () => mockBlossom.uploadBugReport(
-          bugReportFile: any(named: 'bugReportFile'),
-        ),
-      ).thenAnswer((_) async => 'https://media.divine.video/bug-report.txt');
+    test(
+      'returns partial success when DM fails but Blossom URL exists',
+      () async {
+        when(
+          () => mockBlossom.uploadBugReport(
+            bugReportFile: any(named: 'bugReportFile'),
+          ),
+        ).thenAnswer((_) async => 'https://media.divine.video/bug-report.txt');
 
-      when(
-        () => mockNip17.sendPrivateMessage(
-          recipientPubkey: any(named: 'recipientPubkey'),
-          content: any(named: 'content'),
-          additionalTags: any(named: 'additionalTags'),
-        ),
-      ).thenAnswer(
-        (_) async => const NIP17SendResult(
-          success: false,
-          error: 'No relays available',
-        ),
-      );
+        when(
+          () => mockNip17.sendPrivateMessage(
+            recipientPubkey: any(named: 'recipientPubkey'),
+            content: any(named: 'content'),
+            additionalTags: any(named: 'additionalTags'),
+          ),
+        ).thenAnswer(
+          (_) async => const NIP17SendResult(
+            success: false,
+            error: 'No relays available',
+          ),
+        );
 
-      final result = await service.sendBugReportToRecipient(
-        testData,
-        'test-pubkey',
-      );
+        final result = await service.sendBugReportToRecipient(
+          testData,
+          'test-pubkey',
+        );
 
-      // Partial success: Blossom URL exists even though DM failed
-      expect(result.success, isTrue);
-      expect(result.reportId, equals('test-report-001'));
-      expect(result.error, contains('Blossom'));
-    });
+        // Partial success: Blossom URL exists even though DM failed
+        expect(result.success, isTrue);
+        expect(result.reportId, equals('test-report-001'));
+        expect(result.error, contains('Blossom'));
+      },
+    );
 
     test('falls back to email when NIP-17 service not available', () async {
       // Create service without NIP-17 service
@@ -179,43 +181,45 @@ void main() {
       expect(result.success, isNotNull);
     });
 
-    test('NIP-17 message includes bug report URL in tags when uploaded',
-        () async {
-      when(
-        () => mockBlossom.uploadBugReport(
-          bugReportFile: any(named: 'bugReportFile'),
-        ),
-      ).thenAnswer(
-        (_) async => 'https://media.divine.video/report-file.txt',
-      );
-
-      List<List<String>>? capturedTags;
-      when(
-        () => mockNip17.sendPrivateMessage(
-          recipientPubkey: any(named: 'recipientPubkey'),
-          content: any(named: 'content'),
-          additionalTags: any(named: 'additionalTags'),
-        ),
-      ).thenAnswer((invocation) async {
-        capturedTags =
-            invocation.namedArguments[#additionalTags] as List<List<String>>?;
-        return NIP17SendResult.success(
-          messageEventId: 'event-xyz',
-          recipientPubkey: 'test-pubkey',
+    test(
+      'NIP-17 message includes bug report URL in tags when uploaded',
+      () async {
+        when(
+          () => mockBlossom.uploadBugReport(
+            bugReportFile: any(named: 'bugReportFile'),
+          ),
+        ).thenAnswer(
+          (_) async => 'https://media.divine.video/report-file.txt',
         );
-      });
 
-      await service.sendBugReportToRecipient(testData, 'test-pubkey');
+        List<List<String>>? capturedTags;
+        when(
+          () => mockNip17.sendPrivateMessage(
+            recipientPubkey: any(named: 'recipientPubkey'),
+            content: any(named: 'content'),
+            additionalTags: any(named: 'additionalTags'),
+          ),
+        ).thenAnswer((invocation) async {
+          capturedTags =
+              invocation.namedArguments[#additionalTags] as List<List<String>>?;
+          return NIP17SendResult.success(
+            messageEventId: 'event-xyz',
+            recipientPubkey: 'test-pubkey',
+          );
+        });
 
-      expect(capturedTags, isNotNull);
-      // Should include client tag, report_id tag, app_version tag,
-      // and bug_report_url tag
-      final tagNames = capturedTags!.map((t) => t.first).toList();
-      expect(tagNames, contains('client'));
-      expect(tagNames, contains('report_id'));
-      expect(tagNames, contains('app_version'));
-      expect(tagNames, contains('bug_report_url'));
-    });
+        await service.sendBugReportToRecipient(testData, 'test-pubkey');
+
+        expect(capturedTags, isNotNull);
+        // Should include client tag, report_id tag, app_version tag,
+        // and bug_report_url tag
+        final tagNames = capturedTags!.map((t) => t.first).toList();
+        expect(tagNames, contains('client'));
+        expect(tagNames, contains('report_id'));
+        expect(tagNames, contains('app_version'));
+        expect(tagNames, contains('bug_report_url'));
+      },
+    );
 
     test('sends summary only when Blossom upload not available', () async {
       // Create service with NIP-17 but without Blossom
