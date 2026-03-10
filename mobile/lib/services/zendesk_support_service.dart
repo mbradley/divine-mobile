@@ -23,6 +23,11 @@ class ZendeskSupportService {
   static String? _userEmail;
   static String? _userNpub;
 
+  /// Public accessors for user identity (used by reserved username requests)
+  static String? get userName => _userName;
+  static String? get userEmail => _userEmail;
+  static String? get userNpub => _userNpub;
+
   /// JWT authentication state (for native SDK ticket history)
   static String? _cachedJwt;
 
