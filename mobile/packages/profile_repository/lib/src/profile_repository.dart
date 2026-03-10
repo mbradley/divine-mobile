@@ -14,11 +14,11 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart' show Event, Filter;
 import 'package:profile_repository/profile_repository.dart';
 
-/// API endpoint for claiming usernames via NIP-98 auth.
+// TODO(e2e): These URLs are hardcoded to production. Make them
+// constructor-injectable so E2E tests against the local Docker stack
+// don't hit external servers during username claim/check flows.
 const _usernameClaimUrl = 'https://names.divine.video/api/username/claim';
 const _usernameCheckUrl = 'https://names.divine.video/api/username/check';
-
-/// Keycast NIP-05 endpoint for checking username availability on login server.
 const _keycastNip05Url = 'https://login.divine.video/.well-known/nostr.json';
 
 // TODO(search): Move ProfileSearchFilter to a shared package
