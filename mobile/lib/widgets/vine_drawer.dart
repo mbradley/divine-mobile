@@ -174,9 +174,11 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
                             final nip98Service = ref.read(
                               nip98AuthServiceProvider,
                             );
-                            final relayManagerUrl = ref.read(
-                              currentEnvironmentProvider,
-                            ).relayManagerApiUrl;
+                            final relayManagerUrl = ref
+                                .read(
+                                  currentEnvironmentProvider,
+                                )
+                                .relayManagerApiUrl;
 
                             final navigatorContext = Navigator.of(
                               context,
@@ -377,8 +379,7 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
                   // Set JWT identity for ticket list (Zendesk configured for JWT auth)
                   // Don't set anonymous identity first - causes auth type mismatch
                   if (userPubkey != null) {
-                    final jwtSet =
-                        await ZendeskSupportService.setJwtIdentity(
+                    final jwtSet = await ZendeskSupportService.setJwtIdentity(
                       nip98Service: nip98Service,
                       relayManagerUrl: relayManagerUrl,
                     );
