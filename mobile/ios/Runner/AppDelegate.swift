@@ -249,8 +249,6 @@ import SupportProvidersSDK
         }
 
         NSLog("🎫 Zendesk: Setting user identity")
-        NSLog("🎫 Zendesk:   Name: \(name)")
-        NSLog("🎫 Zendesk:   Email: \(email)")
 
         // Create anonymous identity with name and email identifiers
         let identity = Identity.createAnonymous(name: name, email: email)

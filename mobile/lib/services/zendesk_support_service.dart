@@ -2,6 +2,7 @@
 // ABOUTME: Provides ticket creation via native iOS/Android SDKs or REST API for desktop
 
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:openvine/config/zendesk_config.dart';
@@ -28,6 +29,15 @@ class ZendeskSupportService {
   static String? get userName => _userName;
   static String? get userEmail => _userEmail;
   static String? get userNpub => _userNpub;
+
+  /// Reset all static state. Only for use in tests.
+  @visibleForTesting
+  static void resetForTesting() {
+    _initialized = false;
+    _userName = null;
+    _userEmail = null;
+    _userNpub = null;
+  }
 
   /// Initialize Zendesk SDK
   ///
@@ -121,7 +131,7 @@ class ZendeskSupportService {
     _userEmail = effectiveEmail;
 
     Log.info(
-      'Zendesk user info stored (REST API): $effectiveName ($effectiveEmail)',
+      'Zendesk user info stored',
       category: LogCategory.system,
     );
 

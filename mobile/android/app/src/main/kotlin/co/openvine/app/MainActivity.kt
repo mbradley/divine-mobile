@@ -404,7 +404,7 @@ class MainActivity : FlutterActivity() {
                     }
 
                     try {
-                        Log.d(ZENDESK_TAG, "Setting user identity - name: $name, email: $email")
+                        Log.d(ZENDESK_TAG, "Setting user identity")
 
                         // Create anonymous identity with name and email identifiers
                         val identity: Identity = AnonymousIdentity.Builder()

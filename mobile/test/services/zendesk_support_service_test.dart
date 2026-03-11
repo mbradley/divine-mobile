@@ -9,6 +9,7 @@ void main() {
   const MethodChannel channel = MethodChannel('com.openvine/zendesk_support');
 
   setUp(() {
+    ZendeskSupportService.resetForTesting();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, null);
   });
