@@ -10,12 +10,13 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:models/models.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/settings_screen.dart';
 import 'package:openvine/services/bug_report_service.dart';
 // import 'package:openvine/screens/p2p_sync_screen.dart'; // Hidden for release
+import 'package:openvine/services/nip98_auth_service.dart';
 import 'package:openvine/services/zendesk_support_service.dart';
-import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/utils/unified_logger.dart';
 import 'package:openvine/widgets/bug_report_dialog.dart';
@@ -136,24 +137,46 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
                               category: LogCategory.ui,
                             );
 
+                            final userPubkey = authService.currentPublicKeyHex;
+                            if (userPubkey == null) {
+                              Navigator.of(context).pop();
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Log in to contact support',
+                                    ),
+                                    backgroundColor: VineTheme.error,
+                                  ),
+                                );
+                              }
+                              return;
+                            }
+
                             final isZendeskAvailable =
                                 ZendeskSupportService.isAvailable;
                             Log.debug(
-                              '🔍 Zendesk available: $isZendeskAvailable',
+                              'Zendesk available: $isZendeskAvailable',
                               category: LogCategory.ui,
                             );
 
                             final bugReportService = ref.read(
                               bugReportServiceProvider,
                             );
-                            final userPubkey = authService.currentPublicKeyHex;
-                            final userProfile = userPubkey != null
-                                ? ref
-                                      .read(
-                                        userProfileReactiveProvider(userPubkey),
-                                      )
-                                      .value
-                                : null;
+                            final userProfile = ref
+                                .read(
+                                  userProfileReactiveProvider(userPubkey),
+                                )
+                                .value;
+
+                            // Capture services before drawer closes — ref
+                            // becomes invalid after widget unmounts.
+                            final nip98Service = ref.read(
+                              nip98AuthServiceProvider,
+                            );
+                            final relayManagerUrl = ref.read(
+                              currentEnvironmentProvider,
+                            ).relayManagerApiUrl;
 
                             final navigatorContext = Navigator.of(
                               context,
@@ -178,6 +201,8 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
                               userProfile,
                               userPubkey,
                               isZendeskAvailable,
+                              nip98Service: nip98Service,
+                              relayManagerUrl: relayManagerUrl,
                             );
                           },
                         ),
@@ -292,8 +317,10 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
     BugReportService bugReportService,
     UserProfile? userProfile,
     String? userPubkey,
-    bool isZendeskAvailable,
-  ) {
+    bool isZendeskAvailable, {
+    required Nip98AuthService nip98Service,
+    required String relayManagerUrl,
+  }) {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -318,6 +345,8 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
                   userProfile,
                   userPubkey,
                   isZendeskAvailable,
+                  nip98Service: nip98Service,
+                  relayManagerUrl: relayManagerUrl,
                 );
               },
             ),
@@ -328,7 +357,13 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
               subtitle: 'Suggest improvements or new features',
               onTap: () {
                 dialogContext.pop();
-                _handleFeatureRequest(context, userPubkey, isZendeskAvailable);
+                _handleFeatureRequest(
+                  context,
+                  userPubkey,
+                  isZendeskAvailable,
+                  nip98Service: nip98Service,
+                  relayManagerUrl: relayManagerUrl,
+                );
               },
             ),
             const SizedBox(height: 12),
@@ -342,8 +377,10 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
                   // Set JWT identity for ticket list (Zendesk configured for JWT auth)
                   // Don't set anonymous identity first - causes auth type mismatch
                   if (userPubkey != null) {
-                    final npub = NostrKeyUtils.encodePubKey(userPubkey);
-                    await ZendeskSupportService.setJwtIdentity(npub);
+                    await ZendeskSupportService.setJwtIdentity(
+                      nip98Service: nip98Service,
+                      relayManagerUrl: relayManagerUrl,
+                    );
                   }
 
                   Log.debug(
@@ -395,13 +432,17 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
     BugReportService bugReportService,
     UserProfile? userProfile,
     String? userPubkey,
-    bool isZendeskAvailable,
-  ) async {
+    bool isZendeskAvailable, {
+    required Nip98AuthService nip98Service,
+    required String relayManagerUrl,
+  }) async {
     // Set JWT identity for SDK ticket creation (Zendesk configured for JWT auth)
     // Don't set anonymous identity first - causes auth type mismatch
     if (userPubkey != null) {
-      final npub = NostrKeyUtils.encodePubKey(userPubkey);
-      await ZendeskSupportService.setJwtIdentity(npub);
+      await ZendeskSupportService.setJwtIdentity(
+        nip98Service: nip98Service,
+        relayManagerUrl: relayManagerUrl,
+      );
     }
 
     if (!context.mounted) return;
@@ -433,13 +474,17 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
   Future<void> _handleFeatureRequest(
     BuildContext context,
     String? userPubkey,
-    bool isZendeskAvailable,
-  ) async {
+    bool isZendeskAvailable, {
+    required Nip98AuthService nip98Service,
+    required String relayManagerUrl,
+  }) async {
     // Set JWT identity for SDK ticket creation (Zendesk configured for JWT auth)
     // Don't set anonymous identity first - causes auth type mismatch
     if (userPubkey != null) {
-      final npub = NostrKeyUtils.encodePubKey(userPubkey);
-      await ZendeskSupportService.setJwtIdentity(npub);
+      await ZendeskSupportService.setJwtIdentity(
+        nip98Service: nip98Service,
+        relayManagerUrl: relayManagerUrl,
+      );
     }
 
     Log.debug('💡 Opening feature request dialog', category: LogCategory.ui);

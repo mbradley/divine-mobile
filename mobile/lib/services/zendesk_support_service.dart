@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:openvine/config/zendesk_config.dart';
+import 'package:openvine/services/nip98_auth_service.dart';
 import 'package:openvine/utils/unified_logger.dart';
 
 /// Service for interacting with Zendesk Support SDK
@@ -214,34 +215,91 @@ class ZendeskSupportService {
   // JWT Authentication (for native SDK ticket history)
   // ==========================================================================
 
-  /// Set JWT identity on the native Zendesk SDK
+  /// Fetches a pre-auth token from relay-manager by proving identity via NIP-98.
   ///
-  /// Pass the user's npub as the userToken. Zendesk will call our JWT endpoint
-  /// with this token to get the actual JWT for authentication.
+  /// The token is HMAC-signed and nonce-bound — it replaces the raw npub
+  /// as the Zendesk SDK user_token to prevent impersonation.
+  ///
+  /// Throws [Exception] if the pre-auth request fails.
+  static Future<String> fetchPreAuthToken({
+    required Nip98AuthService nip98Service,
+    required String relayManagerUrl,
+  }) async {
+    final url = '$relayManagerUrl/api/zendesk/pre-auth';
+
+    // Clear NIP-98 cache to avoid reusing a token with a stale timestamp.
+    // The server requires created_at within 60s, but tokens are cached 10min.
+    nip98Service.clearTokenCache();
+
+    final authToken = await nip98Service.createAuthToken(
+      url: url,
+      method: HttpMethod.post,
+    );
+
+    if (authToken == null) {
+      throw Exception('Failed to create NIP-98 auth token');
+    }
+
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {
+        'Authorization': authToken.authorizationHeader,
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode != 200) {
+      Log.error(
+        'Pre-auth token request failed: ${response.statusCode} ${response.body}',
+        category: LogCategory.api,
+      );
+      throw Exception('Pre-auth request failed: ${response.statusCode}');
+    }
+
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    if (data['success'] != true || data['token'] == null) {
+      throw Exception('Pre-auth response missing token');
+    }
+
+    Log.debug(
+      'Pre-auth token obtained successfully',
+      category: LogCategory.api,
+    );
+
+    return data['token'] as String;
+  }
+
+  /// Set JWT identity using a pre-auth token obtained via NIP-98.
+  ///
+  /// Fetches a pre-auth token from relay-manager (proving identity with
+  /// the user's private key), then passes it to the Zendesk SDK.
   ///
   /// Returns true if identity was set successfully.
-  static Future<bool> setJwtIdentity(String userToken) async {
+  static Future<bool> setJwtIdentity({
+    required Nip98AuthService nip98Service,
+    required String relayManagerUrl,
+  }) async {
     if (!_initialized) {
       Log.warning(
-        '⚠️ Zendesk JWT: SDK not initialized',
+        'Zendesk JWT: SDK not initialized',
         category: LogCategory.system,
       );
       return false;
     }
 
     try {
-      Log.info(
-        '🎫 Zendesk JWT: Setting identity with user token',
-        category: LogCategory.system,
+      final preAuthToken = await fetchPreAuthToken(
+        nip98Service: nip98Service,
+        relayManagerUrl: relayManagerUrl,
       );
 
       final result = await _channel.invokeMethod('setJwtIdentity', {
-        'userToken': userToken,
+        'userToken': preAuthToken,
       });
 
       if (result == true) {
         Log.info(
-          '✅ Zendesk JWT: Identity set - Zendesk will callback for JWT',
+          'Zendesk JWT: Identity set with pre-auth token',
           category: LogCategory.system,
         );
         return true;
@@ -249,13 +307,13 @@ class ZendeskSupportService {
       return false;
     } on PlatformException catch (e) {
       Log.error(
-        '❌ Zendesk JWT: Platform error - ${e.code}: ${e.message}',
+        'Zendesk JWT: Platform error - ${e.code}: ${e.message}',
         category: LogCategory.system,
       );
       return false;
     } catch (e) {
       Log.error(
-        '❌ Zendesk JWT: Error setting identity - $e',
+        'Zendesk JWT: Error setting identity - $e',
         category: LogCategory.system,
       );
       return false;
