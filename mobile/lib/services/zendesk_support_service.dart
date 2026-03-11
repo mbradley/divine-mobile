@@ -501,7 +501,7 @@ class ZendeskSupportService {
       );
 
       final requestBody = {
-        'request': {
+        'ticket': {
           'subject': subject,
           'comment': {'body': description},
           'requester': _buildRequester(
@@ -512,8 +512,9 @@ class ZendeskSupportService {
         },
       };
 
-      // Zendesk API URL for creating requests (end-user ticket creation)
-      const apiUrl = '${ZendeskConfig.zendeskUrl}/api/v2/requests.json';
+      // Use /api/v2/tickets (agent API) instead of /api/v2/requests (end-user API)
+      // to avoid Zendesk's anonymous request email verification (Mar 2026 rollout)
+      const apiUrl = '${ZendeskConfig.zendeskUrl}/api/v2/tickets.json';
 
       // Create Basic Auth header: email/token:api_token
       const credentials =
@@ -531,7 +532,7 @@ class ZendeskSupportService {
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
-        final ticketId = responseData['request']?['id'];
+        final ticketId = responseData['ticket']?['id'];
         Log.info(
           '✅ Zendesk ticket created via API: #$ticketId - $subject',
           category: LogCategory.system,
