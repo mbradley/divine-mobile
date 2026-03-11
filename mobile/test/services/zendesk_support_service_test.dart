@@ -159,130 +159,53 @@ void main() {
   });
 
   group('ZendeskSupportService.setUserIdentity', () {
-    test('uses NIP-05 as email when available', () async {
-      String? capturedName;
-      String? capturedEmail;
-
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(channel, (MethodCall call) async {
-            if (call.method == 'initialize') return true;
-            if (call.method == 'setUserIdentity') {
-              capturedName = call.arguments['name'] as String?;
-              capturedEmail = call.arguments['email'] as String?;
-              return true;
-            }
-            return null;
-          });
-
-      await ZendeskSupportService.initialize(
-        appId: 'test',
-        clientId: 'test',
-        zendeskUrl: 'https://test.zendesk.com',
-      );
-
-      await ZendeskSupportService.setUserIdentity(
+    test('uses NIP-05 as email when available', () {
+      ZendeskSupportService.setUserIdentity(
         displayName: 'Test User',
         nip05: 'testuser@example.com',
         npub: 'npub1testtesttesttesttesttesttesttesttesttesttesttesttesttest',
       );
 
-      expect(capturedName, 'Test User');
-      expect(capturedEmail, 'testuser@example.com');
+      expect(ZendeskSupportService.userName, 'Test User');
+      expect(ZendeskSupportService.userEmail, 'testuser@example.com');
     });
 
-    test('uses full npub as email when NIP-05 not available', () async {
-      String? capturedEmail;
-
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(channel, (MethodCall call) async {
-            if (call.method == 'initialize') return true;
-            if (call.method == 'setUserIdentity') {
-              capturedEmail = call.arguments['email'] as String?;
-              return true;
-            }
-            return null;
-          });
-
-      await ZendeskSupportService.initialize(
-        appId: 'test',
-        clientId: 'test',
-        zendeskUrl: 'https://test.zendesk.com',
-      );
-
+    test('uses full npub as email when NIP-05 not available', () {
       const testNpub =
           'npub1abcdef1234567890abcdef1234567890abcdef1234567890abcdef12345';
-      await ZendeskSupportService.setUserIdentity(npub: testNpub);
+      ZendeskSupportService.setUserIdentity(npub: testNpub);
 
       // CRITICAL: Uses full npub for unique user identification
       // Email format: {npub}@divine.video
-      expect(capturedEmail, '$testNpub@divine.video');
+      expect(ZendeskSupportService.userEmail, '$testNpub@divine.video');
     });
 
-    test('uses full npub as name when no displayName or NIP-05', () async {
-      String? capturedName;
-
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(channel, (MethodCall call) async {
-            if (call.method == 'initialize') return true;
-            if (call.method == 'setUserIdentity') {
-              capturedName = call.arguments['name'] as String?;
-              return true;
-            }
-            return null;
-          });
-
-      await ZendeskSupportService.initialize(
-        appId: 'test',
-        clientId: 'test',
-        zendeskUrl: 'https://test.zendesk.com',
-      );
-
+    test('uses full npub as name when no displayName or NIP-05', () {
       const testNpub =
           'npub1abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuv';
-      await ZendeskSupportService.setUserIdentity(npub: testNpub);
+      ZendeskSupportService.setUserIdentity(npub: testNpub);
 
       // CRITICAL: Uses full npub (never truncated) for traceability
-      expect(capturedName, testNpub);
+      expect(ZendeskSupportService.userName, testNpub);
     });
 
-    test(
-      'returns true even when native SDK not initialized (REST API fallback)',
-      () async {
-        // Don't initialize native SDK
-        final result = await ZendeskSupportService.setUserIdentity(
-          displayName: 'Test',
-          nip05: 'test@example.com',
-          npub: 'npub1test',
-        );
-
-        // Should still return true because REST API can use stored values
-        expect(result, true);
-      },
-    );
-
-    test('handles PlatformException gracefully', () async {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(channel, (MethodCall call) async {
-            if (call.method == 'initialize') return true;
-            if (call.method == 'setUserIdentity') {
-              throw PlatformException(code: 'ERROR', message: 'Test error');
-            }
-            return null;
-          });
-
-      await ZendeskSupportService.initialize(
-        appId: 'test',
-        clientId: 'test',
-        zendeskUrl: 'https://test.zendesk.com',
-      );
-
-      // Should not throw, should return true (REST API fallback)
-      final result = await ZendeskSupportService.setUserIdentity(
+    test('returns true even when native SDK not initialized', () {
+      final result = ZendeskSupportService.setUserIdentity(
         displayName: 'Test',
+        nip05: 'test@example.com',
         npub: 'npub1test',
       );
 
       expect(result, true);
+    });
+
+    test('stores npub correctly', () {
+      ZendeskSupportService.setUserIdentity(
+        displayName: 'Test',
+        npub: 'npub1test',
+      );
+
+      expect(ZendeskSupportService.userNpub, 'npub1test');
     });
   });
 
@@ -358,73 +281,37 @@ void main() {
   });
 
   group('ZendeskSupportService identity consistency', () {
-    test('same npub produces same synthetic email', () async {
-      final emails = <String>[];
-
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(channel, (MethodCall call) async {
-            if (call.method == 'initialize') return true;
-            if (call.method == 'setUserIdentity') {
-              emails.add(call.arguments['email'] as String);
-              return true;
-            }
-            return null;
-          });
-
-      await ZendeskSupportService.initialize(
-        appId: 'test',
-        clientId: 'test',
-        zendeskUrl: 'https://test.zendesk.com',
-      );
-
+    test('same npub produces same synthetic email', () {
       const testNpub =
           'npub1consistent1234567890abcdef1234567890abcdef1234567890ab';
 
-      // Call setUserIdentity twice with same npub
-      await ZendeskSupportService.setUserIdentity(
+      ZendeskSupportService.setUserIdentity(
         displayName: 'User 1',
         npub: testNpub,
       );
+      final email1 = ZendeskSupportService.userEmail;
 
-      await ZendeskSupportService.setUserIdentity(
+      ZendeskSupportService.setUserIdentity(
         displayName: 'User 2',
         npub: testNpub,
       );
+      final email2 = ZendeskSupportService.userEmail;
 
-      // Both should produce the same email
-      expect(emails.length, 2);
-      expect(emails[0], emails[1]);
+      expect(email1, email2);
     });
 
-    test('different npubs produce different synthetic emails', () async {
-      final emails = <String>[];
-
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(channel, (MethodCall call) async {
-            if (call.method == 'initialize') return true;
-            if (call.method == 'setUserIdentity') {
-              emails.add(call.arguments['email'] as String);
-              return true;
-            }
-            return null;
-          });
-
-      await ZendeskSupportService.initialize(
-        appId: 'test',
-        clientId: 'test',
-        zendeskUrl: 'https://test.zendesk.com',
-      );
-
-      await ZendeskSupportService.setUserIdentity(
+    test('different npubs produce different synthetic emails', () {
+      ZendeskSupportService.setUserIdentity(
         npub: 'npub1user1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
       );
+      final email1 = ZendeskSupportService.userEmail;
 
-      await ZendeskSupportService.setUserIdentity(
+      ZendeskSupportService.setUserIdentity(
         npub: 'npub1user2bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
       );
+      final email2 = ZendeskSupportService.userEmail;
 
-      expect(emails.length, 2);
-      expect(emails[0], isNot(emails[1]));
+      expect(email1, isNot(email2));
     });
   });
 
