@@ -29,9 +29,6 @@ class ZendeskSupportService {
   static String? get userEmail => _userEmail;
   static String? get userNpub => _userNpub;
 
-  /// JWT authentication state (for native SDK ticket history)
-  static String? _cachedJwt;
-
   /// Initialize Zendesk SDK
   ///
   /// Call once at app startup. Returns true if initialization successful.
@@ -90,21 +87,20 @@ class ZendeskSupportService {
     }
   }
 
-  /// Set user identity for Zendesk tickets
+  /// Store user identity for Zendesk tickets (REST API fallback only).
   ///
-  /// Call this after user login to associate tickets with the user.
-  /// For Nostr users, we use:
-  /// - name: Display name or NIP-05 identifier
-  /// - email: NIP-05 identifier (if available) or npub-based email
-  /// - npub: User's npub for reference in ticket body
+  /// Call this after user login. Stores name/email/npub locally for REST API
+  /// ticket creation. Does NOT set identity on the native SDK — the SDK uses
+  /// JWT identity exclusively, set when the user accesses support.
+  /// Setting anonymous identity here would lock the SDK into anonymous auth
+  /// mode and prevent JWT from working.
   ///
-  /// Returns true if identity was set successfully.
-  static Future<bool> setUserIdentity({
+  /// Returns true always (local storage only).
+  static bool setUserIdentity({
     required String npub,
     String? displayName,
     String? nip05,
-  }) async {
-    // Store for REST API fallback
+  }) {
     _userNpub = npub;
 
     // Determine display name: prefer displayName, fall back to NIP-05, then npub
@@ -125,50 +121,10 @@ class ZendeskSupportService {
     _userEmail = effectiveEmail;
 
     Log.info(
-      'Setting Zendesk user identity: $effectiveName ($effectiveEmail)',
+      'Zendesk user info stored (REST API): $effectiveName ($effectiveEmail)',
       category: LogCategory.system,
     );
 
-    // If native SDK is initialized, set identity there too
-    if (_initialized) {
-      try {
-        final result = await _channel.invokeMethod('setUserIdentity', {
-          'name': effectiveName,
-          'email': effectiveEmail,
-        });
-
-        if (result == true) {
-          Log.info(
-            '✅ Zendesk user identity set successfully',
-            category: LogCategory.system,
-          );
-          return true;
-        } else {
-          Log.warning(
-            'Failed to set Zendesk user identity via native SDK',
-            category: LogCategory.system,
-          );
-          // Still return true since REST API will use stored values
-          return true;
-        }
-      } on PlatformException catch (e) {
-        Log.warning(
-          'Platform error setting Zendesk identity: ${e.code} - ${e.message}',
-          category: LogCategory.system,
-        );
-        // Still return true since REST API will use stored values
-        return true;
-      } catch (e) {
-        Log.warning(
-          'Error setting Zendesk identity: $e',
-          category: LogCategory.system,
-        );
-        // Still return true since REST API will use stored values
-        return true;
-      }
-    }
-
-    // Native SDK not initialized, but REST API will use stored values
     return true;
   }
 
@@ -483,51 +439,6 @@ class ZendeskSupportService {
     } catch (e) {
       Log.error(
         'Unexpected error creating Zendesk ticket: $e',
-        category: LogCategory.system,
-      );
-      return false;
-    }
-  }
-
-  /// Show ticket list (user's support request history)
-  ///
-  /// Opens the Zendesk ticket list UI showing the user's past support tickets
-  /// and allowing them to view responses and continue conversations.
-  /// Returns true if ticket list shown successfully, false otherwise.
-  static Future<bool> showTicketList() async {
-    if (!_initialized) {
-      Log.warning(
-        'Zendesk not initialized - cannot show ticket list',
-        category: LogCategory.system,
-      );
-      return false;
-    }
-
-    try {
-      final result = await _channel.invokeMethod('showTicketList');
-
-      if (result == true) {
-        Log.info(
-          'Zendesk ticket list shown successfully',
-          category: LogCategory.system,
-        );
-        return true;
-      } else {
-        Log.warning(
-          'Failed to show Zendesk ticket list',
-          category: LogCategory.system,
-        );
-        return false;
-      }
-    } on PlatformException catch (e) {
-      Log.error(
-        'Platform error showing Zendesk ticket list: ${e.code} - ${e.message}',
-        category: LogCategory.system,
-      );
-      return false;
-    } catch (e) {
-      Log.error(
-        'Unexpected error showing Zendesk ticket list: $e',
         category: LogCategory.system,
       );
       return false;

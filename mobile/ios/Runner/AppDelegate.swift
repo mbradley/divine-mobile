@@ -189,12 +189,11 @@ import SupportProvidersSDK
         // Initialize Support SDK
         Support.initialize(withZendesk: Zendesk.instance)
 
-        // Set baseline anonymous identity so widget works immediately
-        // Flutter will update with email-based identity when user logs in
-        let identity = Identity.createAnonymous()
-        Zendesk.instance?.setIdentity(identity)
+        // No identity set at init — JWT identity will be set when the user
+        // accesses support. Setting anonymous here would lock the SDK into
+        // anonymous auth mode and prevent switching to JWT later.
 
-        NSLog("✅ Zendesk: Initialized with anonymous identity")
+        NSLog("✅ Zendesk: Initialized (identity deferred to JWT)")
         result(true)
 
       case "showNewTicket":
@@ -281,7 +280,7 @@ import SupportProvidersSDK
           return
         }
 
-        NSLog("🎫 Zendesk: Setting JWT identity with user token: \(userToken.prefix(20))...")
+        NSLog("🎫 Zendesk: Setting JWT identity with user token")
 
         // Pass user token (npub) to SDK - Zendesk will call our JWT endpoint to get the actual JWT
         let identity = Identity.createJwt(token: userToken)

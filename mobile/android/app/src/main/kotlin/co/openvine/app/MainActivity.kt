@@ -333,12 +333,11 @@ class MainActivity : FlutterActivity() {
                         // Initialize Support SDK
                         Support.INSTANCE.init(Zendesk.INSTANCE)
 
-                        // Set baseline anonymous identity so widget works immediately
-                        // Flutter will update with email-based identity when user logs in
-                        val identity: Identity = AnonymousIdentity()
-                        Zendesk.INSTANCE.setIdentity(identity)
+                        // No identity set at init — JWT identity will be set when the user
+                        // accesses support. Setting anonymous here would lock the SDK into
+                        // anonymous auth mode and prevent switching to JWT later.
 
-                        Log.d(ZENDESK_TAG, "Zendesk initialized with anonymous identity")
+                        Log.d(ZENDESK_TAG, "Zendesk initialized (identity deferred to JWT)")
                         result.success(true)
                     } catch (e: Exception) {
                         Log.e(ZENDESK_TAG, "Failed to initialize Zendesk", e)

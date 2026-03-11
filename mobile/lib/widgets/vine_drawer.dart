@@ -377,17 +377,29 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
                   // Set JWT identity for ticket list (Zendesk configured for JWT auth)
                   // Don't set anonymous identity first - causes auth type mismatch
                   if (userPubkey != null) {
-                    await ZendeskSupportService.setJwtIdentity(
+                    final jwtSet =
+                        await ZendeskSupportService.setJwtIdentity(
                       nip98Service: nip98Service,
                       relayManagerUrl: relayManagerUrl,
                     );
+                    if (!jwtSet && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Could not authenticate with support',
+                          ),
+                          backgroundColor: VineTheme.error,
+                        ),
+                      );
+                      return;
+                    }
                   }
 
                   Log.debug(
                     '💬 Opening Zendesk ticket list',
                     category: LogCategory.ui,
                   );
-                  await ZendeskSupportService.showTicketList();
+                  await ZendeskSupportService.showTicketListScreen();
                 } else {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -426,7 +438,8 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
   }
 
   /// Handle bug report submission
-  /// Uses JWT identity for SDK ticket creation (enables View Past Messages)
+  /// Sets JWT identity via pre-auth token before creating the ticket so it's
+  /// linked to the authenticated user and visible in "View Past Messages".
   Future<void> _handleBugReportWithServices(
     BuildContext context,
     BugReportService bugReportService,
@@ -436,18 +449,26 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
     required Nip98AuthService nip98Service,
     required String relayManagerUrl,
   }) async {
-    // Set JWT identity for SDK ticket creation (Zendesk configured for JWT auth)
-    // Don't set anonymous identity first - causes auth type mismatch
     if (userPubkey != null) {
-      await ZendeskSupportService.setJwtIdentity(
+      final jwtSet = await ZendeskSupportService.setJwtIdentity(
         nip98Service: nip98Service,
         relayManagerUrl: relayManagerUrl,
       );
+      if (!jwtSet) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Could not authenticate with support'),
+              backgroundColor: VineTheme.error,
+            ),
+          );
+        }
+        return;
+      }
     }
 
     if (!context.mounted) return;
 
-    // Always use custom dialog for bug reports (supports structured fields)
     Log.debug('🐛 Opening bug report dialog', category: LogCategory.ui);
     _showSupportFallbackWithServices(context, bugReportService, userPubkey);
   }
@@ -470,7 +491,8 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
   }
 
   /// Handle feature request submission
-  /// Uses JWT identity for SDK ticket creation (enables View Past Messages)
+  /// Sets JWT identity via pre-auth token before creating the ticket so it's
+  /// linked to the authenticated user and visible in "View Past Messages".
   Future<void> _handleFeatureRequest(
     BuildContext context,
     String? userPubkey,
@@ -478,13 +500,22 @@ class _VineDrawerState extends ConsumerState<VineDrawer> {
     required Nip98AuthService nip98Service,
     required String relayManagerUrl,
   }) async {
-    // Set JWT identity for SDK ticket creation (Zendesk configured for JWT auth)
-    // Don't set anonymous identity first - causes auth type mismatch
     if (userPubkey != null) {
-      await ZendeskSupportService.setJwtIdentity(
+      final jwtSet = await ZendeskSupportService.setJwtIdentity(
         nip98Service: nip98Service,
         relayManagerUrl: relayManagerUrl,
       );
+      if (!jwtSet) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Could not authenticate with support'),
+              backgroundColor: VineTheme.error,
+            ),
+          );
+        }
+        return;
+      }
     }
 
     Log.debug('💡 Opening feature request dialog', category: LogCategory.ui);

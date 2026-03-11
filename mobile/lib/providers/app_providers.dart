@@ -850,7 +850,7 @@ Future<void> _setZendeskIdentity(
       pubkey: pubkeyHex,
     );
 
-    await ZendeskSupportService.setUserIdentity(
+    ZendeskSupportService.setUserIdentity(
       displayName: profile?.bestDisplayName,
       nip05: profile?.nip05,
       npub: npub,
