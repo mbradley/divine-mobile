@@ -447,7 +447,7 @@ class MainActivity : FlutterActivity() {
                     }
 
                     try {
-                        Log.d(ZENDESK_TAG, "Setting JWT identity with user token: ${userToken.take(20)}...")
+                        Log.d(ZENDESK_TAG, "Setting JWT identity with user token")
 
                         // Pass user token (npub) to SDK - Zendesk will call our JWT endpoint to get the actual JWT
                         val identity: Identity = JwtIdentity(userToken)

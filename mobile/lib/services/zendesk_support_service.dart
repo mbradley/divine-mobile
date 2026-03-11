@@ -206,7 +206,7 @@ class ZendeskSupportService {
 
     if (response.statusCode != 200) {
       Log.error(
-        'Pre-auth token request failed: ${response.statusCode} ${response.body}',
+        'Pre-auth token request failed: ${response.statusCode}',
         category: LogCategory.api,
       );
       throw Exception('Pre-auth request failed: ${response.statusCode}');
