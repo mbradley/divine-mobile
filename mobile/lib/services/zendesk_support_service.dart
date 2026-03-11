@@ -590,13 +590,17 @@ class ZendeskSupportService {
         : appVersion;
 
     // Build comprehensive ticket description
+    // Lead with subject so Zendesk SDK ticket list preview is recognizable
+    // (SDK shows first line of description body, not the subject field)
+    final effectiveSubject = subject.isNotEmpty
+        ? subject
+        : 'Bug Report: $reportId';
     final buffer = StringBuffer();
-    buffer.writeln('## Bug Report');
-    buffer.writeln('**Report ID:** $reportId');
-    buffer.writeln('**App Version:** $appVersion');
+    buffer.writeln(effectiveSubject);
     buffer.writeln();
-    buffer.writeln('### Description');
     buffer.writeln(description);
+    buffer.writeln();
+    buffer.writeln('App Version: $appVersion');
     buffer.writeln();
     if (stepsToReproduce != null && stepsToReproduce.isNotEmpty) {
       buffer.writeln('### Steps to Reproduce');
@@ -637,9 +641,6 @@ class ZendeskSupportService {
       buffer.writeln('```');
     }
 
-    final effectiveSubject = subject.isNotEmpty
-        ? subject
-        : 'Bug Report: $reportId';
     final tags = ['bug_report', 'divine_app', 'mobile', platform];
 
     // Build custom fields list for SDK
@@ -786,10 +787,12 @@ class ZendeskSupportService {
     );
 
     // Build ticket description
+    // Lead with subject so Zendesk SDK ticket list preview is recognizable
+    // (SDK shows first line of description body, not the subject field)
+    final effectiveSubject = subject.isNotEmpty ? subject : 'Feature Request';
     final buffer = StringBuffer();
-    buffer.writeln('## Feature Request');
+    buffer.writeln(effectiveSubject);
     buffer.writeln();
-    buffer.writeln('### What would you like?');
     buffer.writeln(description);
     if (usefulness != null && usefulness.isNotEmpty) {
       buffer.writeln();
@@ -807,7 +810,6 @@ class ZendeskSupportService {
       buffer.writeln('**User Pubkey:** $effectivePubkey');
     }
 
-    final effectiveSubject = subject.isNotEmpty ? subject : 'Feature Request';
     final tags = ['feature_request', 'divine_app', 'mobile'];
 
     // Build custom fields list
