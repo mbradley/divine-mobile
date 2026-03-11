@@ -359,10 +359,11 @@ import SupportProvidersSDK
               NSLog("✅ Zendesk: Ticket created successfully - ID: \(request.requestId)")
               result(true)
             } else {
-              NSLog("⚠️ Zendesk: Unknown result when creating ticket")
-              result(FlutterError(code: "UNKNOWN_RESULT",
-                                message: "Request returned but no ticket or error",
-                                details: nil))
+              // No error means the ticket was created — the response type may differ
+              // under JWT auth vs anonymous auth. Treat as success to avoid duplicate
+              // ticket creation via REST API fallback.
+              NSLog("✅ Zendesk: Ticket created (no error, response type: \(type(of: request)))")
+              result(true)
             }
           }
         }
